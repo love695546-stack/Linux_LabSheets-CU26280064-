@@ -1,0 +1,354 @@
+LINUX ADMINISTRATION LAB SHEET - 2 (Course Code: DCS583)
+chmod, chown, chgrp, umask, ps, top, htop, kill, pkill, jobs, bg, fg,
+nice, renice, apt, dnf, dpkg - 50 Practice Problems
+ANSWERS
+==============================================================================
+
+------------------------------ SECTION A - EASY ------------------------------
+
+Q1. Create notes.txt and display its permission string.
+    $ touch notes.txt
+    $ ls -l notes.txt
+    -rw-r--r-- 1 student student 0 ... notes.txt      (default with umask 022)
+
+Q2. Set 644 and verify.
+    $ chmod 644 notes.txt
+    $ ls -l notes.txt
+    -rw-r--r-- 1 student student 0 ... notes.txt
+
+Q3. Set 600 and verify.
+    $ chmod 600 notes.txt
+    $ ls -l notes.txt
+    -rw------- 1 student student 0 ... notes.txt
+
+Q4. Executable script.sh, execute for the owner only (symbolic mode).
+    $ touch script.sh
+    $ chmod u+x script.sh
+    $ ls -l script.sh
+    -rwxr--r-- 1 student student 0 ... script.sh
+
+Q5. Identify user and group ownership of notes.txt.
+    $ whoami
+    student
+    $ ls -l notes.txt
+    -rw------- 1 student student ...      (3rd column = owner, 4th = group)
+
+Q6. Run ps and record the number of processes in the current shell session.
+    $ ps
+      PID TTY          TIME CMD
+     2101 pts/0    00:00:00 bash
+     2230 pts/0    00:00:00 ps
+    Usually 2 processes (bash and ps itself). Count with:  ps --no-headers | wc -l
+
+Q7. Count processes system-wide with ps aux.
+    $ ps aux
+    $ ps aux | wc -l          (subtract 1 for the header line)
+
+Q8. Start a background process and verify with jobs.
+    $ sleep 60 &
+    [1] 2345
+    $ jobs
+    [1]+  Running                 sleep 60 &
+
+Q9. Kill the sleep process by PID.
+    $ kill 2345
+    $ jobs
+    [1]+  Terminated              sleep 60
+
+Q10. Search for the package "tree" without installing.
+    Ubuntu/Debian:   $ apt search tree     or   $ apt-cache search ^tree$
+    RHEL/Rocky:      $ dnf search tree
+
+Q11. Display the current umask.
+    $ umask
+    0022
+
+Q12. Remove write permission from the group on document.txt.
+    $ chmod g-w document.txt
+
+Q13. Bring job 1 to the foreground.
+    $ fg %1        (or just  fg  - uses the current job)
+
+Q14. Resume job 1 in the background.
+    $ bg %1
+    (job must be in "Stopped" state, e.g. after Ctrl+Z)
+
+Q15. Kernel information and architecture.
+    $ uname -a
+    Linux ubuntu 6.8.0-xx-generic #xx-Ubuntu SMP ... x86_64 GNU/Linux
+
+Q16. Processes of the current user.
+    $ ps -u $USER
+
+Q17. Kill the "sleep" process using pkill.
+    $ sleep 300 &
+    $ pkill sleep
+    (pkill -x sleep matches the exact name only)
+
+Q18. Update the package index on Ubuntu/Debian.
+    $ sudo apt update
+
+Q19. List the installed packages.
+    $ apt list --installed          (Debian/Ubuntu)
+    $ dnf list installed            (RHEL/Rocky/Alma)
+
+Q20. Change the owner of script.sh to yourself and verify.
+    $ sudo chown $USER script.sh
+    $ ls -l script.sh
+
+----------------------------- SECTION B - MEDIUM -----------------------------
+
+Q21. script.sh: owner rwx, group r-x, others none.
+    $ chmod 750 script.sh
+    $ ls -l script.sh
+    -rwxr-x--- 1 student student ...
+
+Q22. chmod 700 vs chmod 007.
+    chmod 700 file : owner = rwx, group = ---, others = ---
+                     only the owner has full access (private file).
+    chmod 007 file : owner = ---, group = ---, others = rwx
+                     everybody EXCEPT the owner/group gets full access.
+                     (Strange and dangerous: the owner is locked out, though
+                     the owner can still chmod it back because the owner of a
+                     file may always change its mode.)
+
+Q23. Change user and group owner in one command.
+    $ sudo chown student:student file.txt
+
+Q24. top - sort by CPU, quit.
+    $ top
+    Press  P  (capital P) = sort by CPU usage
+    Press  q              = quit
+    (M = sort by memory, k = kill a PID, h = help)
+
+Q25. Two background sleeps, list, bring job 1 to the foreground.
+    $ sleep 100 &
+    [1] 3001
+    $ sleep 200 &
+    [2] 3002
+    $ jobs
+    [1]-  Running                 sleep 100 &
+    [2]+  Running                 sleep 200 &
+    $ fg %1
+    sleep 100
+    (Ctrl+C to stop it, or Ctrl+Z then bg to send it back)
+
+Q26. Kill all instances of a command at once.
+    $ pkill sleep          (all processes named sleep)
+    $ pkill -f "sleep"     (matches the full command line)
+    Safe target = a test process you started yourself, never system daemons.
+
+Q27. Install tree and run it on the home directory.
+    Ubuntu/Debian:  $ sudo apt install tree -y
+    RHEL/Rocky:     $ sudo dnf install tree -y
+    $ tree ~
+
+Q28. Remove tree and verify.
+    Ubuntu:  $ sudo apt remove tree -y
+             $ apt list --installed | grep tree      (no output = removed)
+             $ dpkg -l | grep -w tree
+    RHEL:    $ sudo dnf remove tree -y
+             $ dnf list installed | grep tree
+
+Q29. Default umask, create test_mask.txt and analyse the permissions.
+    $ umask
+    0022
+    $ touch test_mask.txt
+    $ ls -l test_mask.txt
+    -rw-r--r-- ...
+    Analysis: files start from 666 (no execute by default), directories from 777.
+       666 - 022 = 644  ->  rw-r--r--
+    umask bits are REMOVED from the default permissions.
+
+Q30. Processes of the logged-in user.
+    $ ps aux | grep $USER
+    (cleaner:  ps -u $USER   or   ps aux | grep "^$USER")
+
+Q31. Change the group of project_dir to devteam.
+    $ sudo chgrp devteam project_dir
+    $ ls -ld project_dir
+    (the group must exist:  sudo groupadd devteam)
+    (add -R for the directory contents also)
+
+Q32. Start a low-priority process and confirm.
+    $ nice -n 10 sleep 300 &
+    [1] 3150
+    $ ps -o pid,ni,cmd -p 3150
+      PID  NI CMD
+     3150  10 sleep 300
+    (in top, the NI column shows 10)
+
+Q33. Change the priority of a running process.
+    $ renice -n 15 -p 3150
+    3150 (process ID) old priority 10, new priority 15
+    (raising the nice value is allowed for normal users; lowering below the
+     current value, e.g. negative, requires sudo)
+
+Q34. Search, install and check apache2 / nginx.
+    Ubuntu:  $ apt search apache2
+             $ sudo apt install apache2 -y
+             $ systemctl status apache2
+    RHEL:    $ dnf search nginx
+             $ sudo dnf install nginx -y
+             $ sudo systemctl start nginx
+             $ systemctl status nginx
+    Status should show:  Active: active (running)
+
+Q35. Why can apt install fail without apt update?
+    apt works from a LOCAL cache of the repository index (package names,
+    versions, URLs). On a fresh system the index may be empty or old. Then:
+      - "E: Unable to locate package xyz"  (index has no such package), or
+      - "404 Not Found" while downloading, because the old version listed in
+        the cache has been replaced on the mirror by a newer one.
+    sudo apt update refreshes the index from the repositories, then
+    sudo apt install works.
+
+------------------------------ SECTION C - HARD ------------------------------
+
+Q36. Script with chmod +x, run it, and explain shebang failure.
+    $ nano script.sh
+        #!/bin/bash
+        echo "Hello from script"
+    $ chmod +x script.sh
+    $ ./script.sh
+    Hello from script
+    Why it fails without a valid shebang:
+    The shebang (#!) on the first line tells the kernel which interpreter
+    must run the file. If it is missing, ./script.sh is run by the current
+    shell as a fallback in many cases (it may still work in bash), but in
+    other cases / other shells / exec calls it gives
+    "Exec format error". If it is invalid (e.g. #!/bin/bsh) the error is:
+    "bash: ./script.sh: /bin/bsh: bad interpreter: No such file or directory".
+
+Q37. shared.txt: owner rw, group r, others none (symbolic AND numeric).
+    Symbolic:  $ chmod u=rw,g=r,o= shared.txt
+    Numeric :  $ chmod 640 shared.txt
+    $ ls -l shared.txt
+    -rw-r----- 1 student student ... shared.txt
+
+Q38. nice -n 15 sleep, find the PID in top, explain the nice value.
+    $ nice -n 15 sleep 300 &
+    [1] 3300
+    $ top -p 3300          (the NI column shows 15)
+    Explanation: nice value ranges from -20 (highest priority) to +19
+    (lowest priority); the default is 0. The scheduler gives a process with
+    a HIGH nice value a SMALLER share of CPU time when CPU is contended
+    (it is "nicer" to others). On an idle CPU it makes no difference.
+    Only root can set negative values.
+
+Q39. kill 1234 does not terminate the process.
+    Escalate with SIGKILL:
+        $ kill -9 1234        (same as kill -KILL 1234)
+    Why it is a last resort: SIGKILL cannot be caught or ignored. The process
+    gets NO chance to clean up - it cannot flush buffers, close files, remove
+    lock/temp files or free shared memory - so data can be lost or corrupted
+    and child processes may be orphaned. Always try SIGTERM (15) first, and
+    check with  ps -p 1234.
+
+Q40. Top 5 CPU-consuming processes.
+    $ ps aux --sort=-%cpu | head -5
+    (head -5 includes the header line + 4 processes; use head -6 for 5
+     processes)
+
+Q41. find + chmod to make all .sh files executable.
+    $ find . -type f -name "*.sh" -exec chmod +x {} \;
+    (or:  find . -name "*.sh" | xargs chmod +x )
+
+Q42. Risks of chmod 777 on a sensitive configuration file.
+    777 = rwx for owner, group AND others, so EVERY user/process on the
+    system can:
+      - read secrets (passwords, keys, tokens) inside the config,
+      - modify it (change settings, add malicious entries/backdoors),
+      - replace a script that is run by root -> privilege escalation,
+      - delete or corrupt it -> service outage.
+    Services such as sshd, sudo, and others REFUSE to use files with unsafe
+    permissions. Violates the principle of least privilege and audit
+    standards. Use e.g. 600/640 and correct ownership (chown root:root).
+
+Q43. Install tree and list every file installed by the package.
+    Debian/Ubuntu:  $ sudo apt install tree -y
+                    $ dpkg -L tree
+                    /usr/bin/tree
+                    /usr/share/man/man1/tree.1.gz ...
+    RHEL/Rocky:     $ sudo dnf install tree -y
+                    $ rpm -ql tree
+
+Q44. SIGTERM (15) vs SIGKILL (9).
+    SIGTERM (15): polite request to terminate. The process CAN catch it,
+        run a signal handler, save data, close files/sockets, remove temp
+        files, then exit gracefully. It can also be ignored/blocked.
+    SIGKILL (9): handled by the kernel itself; it cannot be caught, blocked
+        or ignored. The process is removed immediately with no cleanup.
+    Applications should handle SIGTERM so that they shut down cleanly
+    (flush buffers, commit transactions, release locks) - this is how
+    systemd and "kill" normally stop services.
+
+Q45. Two files owned by different users, find by owner.
+    $ touch f1.txt f2.txt
+    $ sudo chown root f2.txt
+    $ ls -l f1.txt f2.txt
+    -rw-r--r-- 1 student student 0 ... f1.txt
+    -rw-r--r-- 1 root    student 0 ... f2.txt
+    $ find . -maxdepth 1 -type f -user root
+    ./f2.txt
+    $ find . -maxdepth 1 -type f -user $USER
+    ./f1.txt
+
+Q46. SUID on custom_tool.
+    $ chmod u+s custom_tool          (or  chmod 4755 custom_tool)
+    $ ls -l custom_tool
+    -rwsr-xr-x 1 root root ... custom_tool
+    Implication: when ANY user runs the program, it executes with the
+    privileges of the FILE OWNER (e.g. root), not those of the user. Example:
+    /usr/bin/passwd lets normal users update /etc/shadow. Dangerous if the
+    program has bugs (privilege escalation), so use sparingly. Lower-case
+    's' = owner execute is also set; capital 'S' = execute missing.
+
+Q47. SGID on /shared_dir with octal 2775.
+    $ sudo mkdir /shared_dir
+    $ sudo chgrp devteam /shared_dir
+    $ sudo chmod 2775 /shared_dir
+    $ ls -ld /shared_dir
+    drwxrwsr-x 2 root devteam ... /shared_dir
+    Effect: new files and subdirectories created inside inherit the GROUP of
+    the directory (devteam) instead of the creator's primary group (and
+    subdirectories inherit the SGID bit too), so team members can share files.
+
+Q48. Sticky bit on /public_tmp.
+    $ sudo mkdir /public_tmp
+    $ sudo chmod 1777 /public_tmp        (or  chmod o+t /public_tmp)
+    $ ls -ld /public_tmp
+    drwxrwxrwt 2 root root ... /public_tmp
+    Why it prevents unauthorised deletion: in a sticky directory a file can
+    be deleted or renamed only by the file's owner, the directory's owner or
+    root - even though everybody has write permission on the directory.
+    Used on /tmp.
+
+Q49. Job management: Ctrl+Z, jobs, bg, fg.
+    $ sleep 500
+    ^Z
+    [1]+  Stopped                 sleep 500
+    $ jobs
+    [1]+  Stopped                 sleep 500
+    $ bg %1
+    [1]+ sleep 500 &
+    $ jobs
+    [1]+  Running                 sleep 500 &
+    $ fg %1
+    sleep 500
+    ^C                          (terminate it)
+
+Q50. Find the process using the most memory, log it, request termination.
+    $ ps aux --sort=-%mem | sed -n '2p' > top_memory.log
+    $ cat top_memory.log
+    student  4120  1.2 8.5 ... firefox
+    $ PID=$(ps aux --sort=-%mem | awk 'NR==2 {print $2}')
+    $ echo "Top memory PID: $PID" >> top_memory.log
+    $ kill -TERM $PID            (SIGTERM = 15, graceful)
+    One-liner:
+    $ ps aux --sort=-%mem | awk 'NR==2{print $2}' | tee -a top_memory.log | xargs kill -15
+    (Caution: use only on a test process; the top process may be the desktop
+     or a database. Test first with:  sleep 1000 &  and a manual PID.)
+
+==============================================================================
+END OF LAB SHEET 2 ANSWERS

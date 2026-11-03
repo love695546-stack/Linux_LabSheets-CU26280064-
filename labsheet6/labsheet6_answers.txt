@@ -1,0 +1,211 @@
+LINUX LAB SHEET 6: FILE PERMISSIONS & ACL  (Subject Code UAC02P)
+chmod, umask, setfacl, getfacl
+ANSWERS
+==============================================================================
+Permission refresher:  r=4  w=2  x=1   |   user(u) group(g) others(o)
+
+Q1. Create directory lab6 and file permissions.txt inside it.
+    $ mkdir lab6
+    $ touch lab6/permissions.txt
+    $ ls -l lab6
+
+Q2. Long listing; identify owner, group and rwx permissions.
+    $ ls -l lab6/permissions.txt
+    -rw-r--r-- 1 student student 0 Nov  3 10:00 lab6/permissions.txt
+    -          file type (- regular file, d directory, l link)
+    rw-        owner (user) permissions  -> read, write
+    r--        group permissions         -> read
+    r--        others permissions        -> read
+    student    owner (3rd column)       student   group (4th column)
+
+Q3. Symbolic mode: owner rwx, group rw, others none.
+    $ cd lab6
+    $ chmod u=rwx,g=rw,o= permissions.txt
+    $ ls -l permissions.txt
+    -rwxrw---- 1 student student 0 ... permissions.txt
+
+Q4. Numeric mode 640.
+    $ chmod 640 permissions.txt
+    $ ls -l permissions.txt
+    -rw-r----- 1 student student 0 ... permissions.txt
+    (6 = rw-, 4 = r--, 0 = ---)
+
+Q5. Numeric mode 755.
+    $ chmod 755 permissions.txt
+    $ ls -l permissions.txt
+    -rwxr-xr-x 1 student student 0 ... permissions.txt
+
+Q6. Remove execute from the owner (symbolic).
+    $ chmod u-x permissions.txt
+    $ ls -l permissions.txt
+    -rw-r-xr-x 1 student student 0 ...
+
+Q7. Add read and execute for the group without changing the owner's bits.
+    $ chmod g+rx permissions.txt
+    $ ls -l permissions.txt
+    -rw-r-xr-x ...        (owner bits unchanged; group already had r-x here)
+    Only the group bits change - "+" adds, "u"/"o" are not mentioned.
+
+Q8. Remove all permissions from others and verify.
+    $ chmod o-rwx permissions.txt          (or  chmod o= permissions.txt)
+    $ ls -l permissions.txt
+    -rw-r-x--- 1 student student 0 ...
+
+Q9. Directory securedata with 750.
+    $ mkdir securedata
+    $ chmod 750 securedata
+    $ ls -ld securedata
+    drwxr-x--- 2 student student 4096 ... securedata
+
+Q10. Difference between file and directory r, w, x - with a practice demo.
+    Meaning:
+      Permission | On a FILE                | On a DIRECTORY
+      r          | read the contents (cat)  | list the names inside (ls)
+      w          | modify the contents      | create / delete / rename files inside
+      x          | run it as a program      | enter it (cd) and access items by name
+    Demo:
+    $ mkdir practice ; echo "hello" > practice/f.txt
+    $ chmod 000 practice
+    $ ls practice ; cd practice            -> Permission denied  (no r, no x)
+    $ chmod 400 practice                   (r only)
+    $ ls practice                          -> lists "f.txt" but with errors on
+                                              details (needs x to see attributes)
+    $ cat practice/f.txt                   -> Permission denied (no x to enter)
+    $ chmod 100 practice                   (x only)
+    $ ls practice                          -> Permission denied (no r)
+    $ cat practice/f.txt                   -> hello   (x allows access by name)
+    $ chmod 500 practice                   (r-x)
+    $ touch practice/new.txt               -> Permission denied (no w)
+    $ chmod 700 practice
+    $ touch practice/new.txt               -> works
+    (Note: if you are root all of these checks are bypassed. Test as a normal
+     user.)
+
+Q11. Display the current umask and record it.
+    $ umask
+    0022
+    $ umask -S
+    u=rwx,g=rx,o=rx
+
+Q12. Temporarily set umask 027 and create a file and a directory.
+    $ umask 027
+    $ touch umask_file.txt
+    $ mkdir umask_dir
+    $ ls -ld umask_file.txt umask_dir
+    -rw-r----- 1 student student 0 ... umask_file.txt     (666 - 027 = 640)
+    drwxr-x--- 2 student student 4096 ... umask_dir       (777 - 027 = 750)
+    Others get no access; the group loses write.
+
+Q13. Restore the previous umask and verify.
+    $ umask 022
+    $ umask
+    0022
+    (or open a new shell / terminal - umask set on the command line affects
+     only the current shell session)
+
+Q14. Create a user and group for ACL practice and the file aclfile.txt.
+    $ sudo groupadd aclgroup
+    $ sudo useradd -m acluser
+    $ sudo passwd acluser                 (optional)
+    $ touch aclfile.txt
+    $ ls -l aclfile.txt
+    -rw-r--r-- 1 student student 0 ... aclfile.txt
+    (If getfacl/setfacl are missing: sudo apt install acl  /  sudo dnf install acl)
+
+Q15. Display the ACL of aclfile.txt and identify the entries.
+    $ getfacl aclfile.txt
+    # file: aclfile.txt
+    # owner: student
+    # group: student
+    user::rw-            <- owner entry
+    group::r--           <- owning group entry
+    other::r--           <- others entry
+    (after adding extra entries you will also see:  user:acluser:rw-
+     named user entry, group:aclgroup:r-- named group entry, and
+     mask::rwx = the maximum permission allowed for named users/groups
+     and the owning group)
+
+Q16. Give acluser read/write on aclfile.txt using setfacl.
+    $ setfacl -m u:acluser:rw aclfile.txt
+    $ getfacl aclfile.txt
+    # file: aclfile.txt
+    # owner: student
+    # group: student
+    user::rw-
+    user:acluser:rw-
+    group::r--
+    mask::rw-
+    other::r--
+    $ ls -l aclfile.txt
+    -rw-rw-r--+ 1 student student 0 ...     (the "+" shows an ACL exists)
+    The owner/group/other base permissions are not changed by setfacl itself.
+    (The "group" column in ls -l now shows the MASK, which is normal.)
+
+Q17. Give a group read permission and verify.
+    $ setfacl -m g:aclgroup:r aclfile.txt
+    $ getfacl aclfile.txt
+    ...
+    user:acluser:rw-
+    group::r--
+    group:aclgroup:r--
+    mask::rw-
+    other::r--
+
+Q18. Modify and remove a specific ACL entry.
+    Modify (change acluser to read-only):
+        $ setfacl -m u:acluser:r aclfile.txt
+        $ getfacl aclfile.txt | grep acluser
+        user:acluser:r--
+    Remove the entry for acluser:
+        $ setfacl -x u:acluser aclfile.txt
+        $ getfacl aclfile.txt            -> no acluser line
+    Remove the group entry too:
+        $ setfacl -x g:aclgroup aclfile.txt
+    Remove ALL extended ACL entries:  setfacl -b aclfile.txt
+
+Q19. Default ACL on a directory so new files inherit the access.
+    $ mkdir acldir
+    $ setfacl -m d:u:acluser:rw acldir          (d: = default ACL)
+    $ getfacl acldir
+    # file: acldir
+    # owner: student
+    # group: student
+    user::rwx
+    group::r-x
+    other::r-x
+    default:user::rwx
+    default:user:acluser:rw-
+    default:group::r-x
+    default:mask::rwx
+    default:other::r-x
+    $ touch acldir/newfile.txt
+    $ getfacl acldir/newfile.txt
+    # file: acldir/newfile.txt
+    user::rw-
+    user:acluser:rw-            <- inherited from the default ACL
+    group::r-x                  #effective:r--
+    mask::rw-
+    other::r--
+    Default ACLs only affect files/directories created AFTER they are set.
+    (Remove the default ACL with  setfacl -k acldir )
+
+Q20. Complete workflow: create, modify, verify and clean up.
+    $ mkdir lab6_flow && cd lab6_flow
+    $ touch report.txt
+    $ chmod 640 report.txt ; ls -l report.txt          # permissions
+    $ umask 027 ; touch new.txt ; ls -l new.txt ; umask 022   # umask
+    $ sudo useradd flowuser                            # ACL practice user
+    $ setfacl -m u:flowuser:rw report.txt              # ACL entry
+    $ getfacl report.txt                               # verify
+    $ mkdir shared ; setfacl -m d:u:flowuser:rwx shared   # default ACL
+    $ touch shared/a.txt ; getfacl shared/a.txt        # inheritance
+    $ setfacl -x u:flowuser report.txt                 # remove entry
+    $ setfacl -b report.txt                            # remove all ACLs
+    Clean-up:
+    $ cd .. ; rm -rf lab6_flow lab6 securedata practice acldir aclfile.txt umask_file.txt umask_dir
+    $ sudo userdel -r flowuser ; sudo userdel -r acluser
+    $ sudo groupdel aclgroup
+    $ umask          -> 0022 (restored)
+
+==============================================================================
+END OF LAB SHEET 6 ANSWERS

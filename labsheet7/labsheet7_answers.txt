@@ -1,0 +1,164 @@
+LINUX LAB 7: PROCESS MANAGEMENT  (Subject Code UAC02P)
+ps, top, htop, kill, pkill and foreground/background job commands
+ANSWERS
+==============================================================================
+
+Q1. Processes of the current user (PID, terminal, status).
+    $ ps
+      PID TTY          TIME CMD
+     2101 pts/0    00:00:00 bash
+     2230 pts/0    00:00:00 ps
+    $ ps -u $USER        (all processes of the current user)
+    $ ps -u $USER -o pid,tty,stat,cmd     (adds the STAT/status column)
+    PID = process id, TTY = controlling terminal, TIME = CPU time used,
+    CMD = command. STAT codes: R running, S sleeping, T stopped, Z zombie,
+    D uninterruptible sleep, s session leader, + foreground, < high priority.
+
+Q2. All processes with ps; identify PID, user and command.
+    $ ps -ef
+    UID        PID  PPID  C STIME TTY          TIME CMD
+    root         1     0  0 09:00 ?        00:00:03 /sbin/init
+    student   2101  2095  0 09:10 pts/0    00:00:00 -bash
+    (also:  ps -e   or   ps -A )
+    UID = user, PID = process ID, PPID = parent PID, CMD = command.
+
+Q3. ps aux and the CPU / memory fields.
+    $ ps aux
+    USER   PID %CPU %MEM    VSZ   RSS TTY   STAT START   TIME COMMAND
+    root     1  0.0  0.3 168936 11796 ?     Ss   09:00   0:03 /sbin/init
+    %CPU = share of CPU time used,  %MEM = share of physical RAM used,
+    VSZ = virtual memory size (KB),  RSS = resident (physical) memory (KB).
+    $ ps aux | head -5
+
+Q4. Process hierarchy (parent-child).
+    $ ps -ef --forest          (or  ps axjf ,  or  pstree -p )
+    root   1   0 ... /sbin/init
+    root 812   1 ...  \_ /usr/sbin/sshd
+    student 2101 2095 ...  \_ -bash
+    student 2230 2101 ...      \_ ps -ef --forest
+    PPID shows the parent of each process.
+
+Q5. Start top and observe.
+    $ top
+    Header: uptime, load average, task counts (running/sleeping/stopped/zombie),
+    %Cpu(s) (us, sy, id, wa), MiB Mem and MiB Swap usage.
+    Table columns: PID USER PR NI VIRT RES SHR S %CPU %MEM TIME+ COMMAND.
+    Keys: q quit, P sort by CPU, M sort by memory, k kill, r renice, h help.
+
+Q6. Identify a high CPU/memory process and record its PID.
+    $ top            (press P for CPU or M for memory sorting)
+    The first row after the header is the highest user. Record its PID, e.g.
+    PID 3456 (COMMAND firefox, %CPU 12.3, %MEM 8.1).
+    Create a test load:  yes > /dev/null &   then check top - "yes" appears
+    near the top with ~100% CPU. Stop it with  kill %1.
+
+Q7. Start htop and use its interface.
+    $ htop       (install if needed: sudo apt install htop / sudo dnf install htop)
+    F2 setup, F3 search, F4 filter, F5 tree view, F6 sort by column,
+    F7/F8 nice -/+, F9 kill (choose signal), F10 or q quit.
+    Shows coloured CPU/memory bars and mouse support.
+
+Q8. Foreground command terminated with Ctrl+C.
+    $ sleep 300
+    ^C                      (SIGINT sent; the prompt returns)
+    $ ping -c 100 localhost  then  Ctrl+C   also works.
+
+Q9. Background job using &.
+    $ sleep 300 &
+    [1] 4012
+    [1] = job number, 4012 = PID of the background process.
+
+Q10. Display jobs.
+    $ jobs
+    [1]+  Running                 sleep 300 &
+
+Q11. Bring a background job to the foreground and terminate it safely.
+    $ fg %1
+    sleep 300
+    ^C                      (SIGINT stops it cleanly)
+    $ jobs                  -> no output (job finished)
+
+Q12. Suspend a foreground process with Ctrl+Z.
+    $ sleep 400
+    ^Z
+    [1]+  Stopped                 sleep 400
+    $ jobs
+    [1]+  Stopped                 sleep 400
+    $ ps -o pid,stat,cmd -p $(pgrep -n sleep)     -> STAT = T (stopped)
+
+Q13. Resume a stopped job in the background with bg.
+    $ bg %1
+    [1]+ sleep 400 &
+    $ jobs
+    [1]+  Running                 sleep 400 &
+
+Q14. jobs -l to display job number and PID.
+    $ jobs -l
+    [1]+  4020 Running                 sleep 400 &
+    [2]-  4025 Stopped                 sleep 500
+    (the column after the job number is the PID)
+
+Q15. Terminate a process with kill and verify.
+    $ sleep 600 &
+    [1] 4100
+    $ kill 4100                  (default signal = SIGTERM)
+    [1]+  Terminated              sleep 600
+    $ ps -p 4100                 -> only the header = process ended
+    $ pgrep -x sleep             -> no output
+
+Q16. kill -TERM and why SIGTERM is preferred.
+    $ sleep 600 &
+    [1] 4120
+    $ kill -TERM 4120            (same as kill -15 4120)
+    Why SIGTERM first: it can be caught, so the program can clean up: save
+    data, close files/sockets, remove temp/lock files, stop child processes
+    and exit gracefully. SIGKILL cannot be caught and gives no chance to
+    clean up, so it may cause data loss/corruption or leave orphan processes.
+
+Q17. kill -KILL when normal termination does not work.
+    $ sleep 600 &
+    [1] 4150
+    $ kill 4150 ; ps -p 4150        (try SIGTERM first - still running?)
+    $ kill -KILL 4150               (same as kill -9 4150)
+    [1]+  Killed                  sleep 600
+    $ ps -p 4150                    -> gone
+    The kernel removes the process immediately; it cannot be ignored.
+
+Q18. pkill by name.
+    $ sleep 700 &
+    $ sleep 800 &
+    $ pkill sleep                   (or pkill -x sleep for an exact match)
+    $ pgrep sleep                   -> no output = all terminated
+    $ jobs                          -> shows Terminated
+
+Q19. Manage multiple test processes safely.
+    $ sleep 100 &     [1] 5001
+    $ sleep 200 &     [2] 5002
+    $ sleep 300 &     [3] 5003
+    $ jobs -l                       (list all with PIDs)
+    $ ps -o pid,stat,cmd -C sleep   (check the real processes)
+    $ kill %2                       (kill by job number)
+    $ kill 5003                     (kill by PID)
+    $ pkill -f "sleep 100"          (kill by command-line match)
+    $ jobs ; pgrep sleep            (confirm everything is finished)
+    Safety: only operate on your own test processes; check the PID with
+    ps/pgrep before killing; never kill PID 1 or system daemons.
+
+Q20. Complete workflow.
+    $ ps -u $USER                                    # 1. inspect
+    $ ps aux --sort=-%cpu | head -5                  # top CPU users
+    $ sleep 500                                      # 2. foreground job
+    ^Z                                               # 3. suspend
+    [1]+  Stopped                 sleep 500
+    $ bg %1                                          # 4. resume in background
+    [1]+ sleep 500 &
+    $ jobs -l                                        # 5. check
+    $ fg %1                                          # 6. bring it back (optional)
+    ^Z ; bg %1
+    $ kill %1                                        # 7. terminate (SIGTERM)
+    $ jobs                                           # confirm "Terminated"
+    $ pkill sleep                                    # 8. clean up leftovers
+    $ pgrep -l sleep                                 # none left
+
+==============================================================================
+END OF LAB 7 ANSWERS

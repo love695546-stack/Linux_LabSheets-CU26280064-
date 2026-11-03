@@ -1,0 +1,375 @@
+LINUX LAB 11: ARCHIVE & COMPRESSION  (Subject Code UAC02P)
+tar, gzip, gunzip, zip and unzip
+ANSWERS  (all commands below were actually executed; outputs are real)
+==============================================================================
+
+==============================================================================
+Q1. Create archive_lab with three text files and sample content
+==============================================================================
+$ mkdir archive_lab
+$ echo 'This is file one' > archive_lab/file1.txt
+$ echo 'This is file two with more text' > archive_lab/file2.txt
+$ echo 'File three: Linux archive and compression practice' > archive_lab/file3.txt
+$ ls -l archive_lab
+total 12
+-rw-r--r-- 1 student student 17 Nov  3 02:44 file1.txt
+-rw-r--r-- 1 student student 32 Nov  3 02:44 file2.txt
+-rw-r--r-- 1 student student 51 Nov  3 02:44 file3.txt
+$ cat archive_lab/*.txt
+This is file one
+This is file two with more text
+File three: Linux archive and compression practice
+
+==============================================================================
+Q2. Create files.tar containing all files from archive_lab
+==============================================================================
+$ tar -cvf files.tar archive_lab
+archive_lab/
+archive_lab/file2.txt
+archive_lab/file3.txt
+archive_lab/file1.txt
+$ ls -lh files.tar
+-rw-r--r-- 1 student student 10K Nov  3 02:44 files.tar
+
+(-c create, -v verbose, -f archive file name)
+
+==============================================================================
+Q3. List the contents of files.tar without extracting
+==============================================================================
+$ tar -tvf files.tar
+drwxr-xr-x student/student         0 2026-11-03 02:44 archive_lab/
+-rw-r--r-- student/student        32 2026-11-03 02:44 archive_lab/file2.txt
+-rw-r--r-- student/student        51 2026-11-03 02:44 archive_lab/file3.txt
+-rw-r--r-- student/student        17 2026-11-03 02:44 archive_lab/file1.txt
+
+(-t = list)
+
+==============================================================================
+Q4. Extract files.tar into extracted_tar
+==============================================================================
+$ mkdir extracted_tar
+$ tar -xvf files.tar -C extracted_tar
+archive_lab/
+archive_lab/file2.txt
+archive_lab/file3.txt
+archive_lab/file1.txt
+$ ls -R extracted_tar
+extracted_tar:
+archive_lab
+
+extracted_tar/archive_lab:
+file1.txt
+file2.txt
+file3.txt
+
+(-x extract, -C change to the target directory first)
+
+==============================================================================
+Q5. Create a gzip-compressed file from a text file; observe the filename change
+==============================================================================
+$ cp archive_lab/file2.txt gzip_demo.txt
+$ ls -l gzip_demo.txt
+-rw-r--r-- 1 student student 32 Nov  3 02:44 gzip_demo.txt
+$ gzip gzip_demo.txt
+$ ls -l gzip_demo*
+-rw-r--r-- 1 student student 63 Nov  3 02:44 gzip_demo.txt.gz
+
+Observation: gzip REPLACES gzip_demo.txt with gzip_demo.txt.gz (original removed).
+Use  gzip -k gzip_demo.txt  to keep the original file.
+
+==============================================================================
+Q6. Use gunzip to decompress and verify the original is restored
+==============================================================================
+$ gunzip gzip_demo.txt.gz
+$ ls -l gzip_demo*
+-rw-r--r-- 1 student student 32 Nov  3 02:44 gzip_demo.txt
+$ cat gzip_demo.txt
+This is file two with more text
+
+(gunzip file.gz is the same as gzip -d file.gz)
+
+==============================================================================
+Q7. Create archive.tar.gz containing the complete archive_lab directory
+==============================================================================
+$ tar -czvf archive.tar.gz archive_lab
+archive_lab/
+archive_lab/file2.txt
+archive_lab/file3.txt
+archive_lab/file1.txt
+$ ls -lh archive.tar.gz
+-rw-r--r-- 1 student student 261 Nov  3 02:44 archive.tar.gz
+
+(-z = filter through gzip)
+
+==============================================================================
+Q8. List the contents of archive.tar.gz without extracting
+==============================================================================
+$ tar -tzvf archive.tar.gz
+drwxr-xr-x student/student         0 2026-11-03 02:44 archive_lab/
+-rw-r--r-- student/student        32 2026-11-03 02:44 archive_lab/file2.txt
+-rw-r--r-- student/student        51 2026-11-03 02:44 archive_lab/file3.txt
+-rw-r--r-- student/student        17 2026-11-03 02:44 archive_lab/file1.txt
+
+==============================================================================
+Q9. Extract archive.tar.gz into a separate directory and verify
+==============================================================================
+$ mkdir extracted_targz
+$ tar -xzvf archive.tar.gz -C extracted_targz
+archive_lab/
+archive_lab/file2.txt
+archive_lab/file3.txt
+archive_lab/file1.txt
+$ ls -lR extracted_targz
+extracted_targz:
+total 4
+drwxr-xr-x 2 student student 4096 Nov  3 02:44 archive_lab
+
+extracted_targz/archive_lab:
+total 12
+-rw-r--r-- 1 student student 17 Nov  3 02:44 file1.txt
+-rw-r--r-- 1 student student 32 Nov  3 02:44 file2.txt
+-rw-r--r-- 1 student student 51 Nov  3 02:44 file3.txt
+$ diff -r archive_lab extracted_targz/archive_lab && echo 'Identical to the original'
+Identical to the original
+
+==============================================================================
+Q10. Create files.zip containing three selected files
+==============================================================================
+$ zip files.zip archive_lab/file1.txt archive_lab/file2.txt archive_lab/file3.txt
+  adding: archive_lab/file1.txt (stored 0%)
+  adding: archive_lab/file2.txt (deflated 3%)
+  adding: archive_lab/file3.txt (stored 0%)
+$ ls -lh files.zip
+-rw-r--r-- 1 student student 631 Nov  3 02:44 files.zip
+
+==============================================================================
+Q11. List the contents of files.zip without extracting
+==============================================================================
+$ unzip -l files.zip
+Archive:  files.zip
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+       17  2026-11-03 02:44   archive_lab/file1.txt
+       32  2026-11-03 02:44   archive_lab/file2.txt
+       51  2026-11-03 02:44   archive_lab/file3.txt
+---------                     -------
+      100                     3 files
+
+(unzip -Z files.zip gives a ls-style listing)
+
+==============================================================================
+Q12. Extract files.zip into extracted_zip
+==============================================================================
+$ unzip files.zip -d extracted_zip
+Archive:  files.zip
+ extracting: extracted_zip/archive_lab/file1.txt  
+  inflating: extracted_zip/archive_lab/file2.txt  
+ extracting: extracted_zip/archive_lab/file3.txt  
+$ ls -R extracted_zip
+extracted_zip:
+archive_lab
+
+extracted_zip/archive_lab:
+file1.txt
+file2.txt
+file3.txt
+
+(-d = destination directory)
+
+==============================================================================
+Q13. Extract only one selected file from a ZIP archive
+==============================================================================
+$ mkdir one_file
+$ unzip files.zip archive_lab/file2.txt -d one_file
+Archive:  files.zip
+  inflating: one_file/archive_lab/file2.txt  
+$ ls -R one_file
+one_file:
+archive_lab
+
+one_file/archive_lab:
+file2.txt
+
+==============================================================================
+Q14. Create a ZIP archive containing an entire directory and verify
+==============================================================================
+$ zip -r dir_archive.zip archive_lab
+  adding: archive_lab/ (stored 0%)
+  adding: archive_lab/file2.txt (deflated 3%)
+  adding: archive_lab/file3.txt (stored 0%)
+  adding: archive_lab/file1.txt (stored 0%)
+$ unzip -l dir_archive.zip
+Archive:  dir_archive.zip
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+        0  2026-11-03 02:44   archive_lab/
+       32  2026-11-03 02:44   archive_lab/file2.txt
+       51  2026-11-03 02:44   archive_lab/file3.txt
+       17  2026-11-03 02:44   archive_lab/file1.txt
+---------                     -------
+      100                     4 files
+$ unzip -t dir_archive.zip
+Archive:  dir_archive.zip
+    testing: archive_lab/             OK
+    testing: archive_lab/file2.txt    OK
+    testing: archive_lab/file3.txt    OK
+    testing: archive_lab/file1.txt    OK
+No errors detected in compressed data of dir_archive.zip.
+
+(-r = recurse into the directory;  unzip -t tests the archive integrity)
+
+==============================================================================
+Q15. Gzip-compressed tar archive; difference between tar and gzip
+==============================================================================
+$ tar -cvf step.tar archive_lab
+archive_lab/
+archive_lab/file2.txt
+archive_lab/file3.txt
+archive_lab/file1.txt
+$ gzip step.tar
+$ ls -l step.tar.gz
+-rw-r--r-- 1 student student 270 Nov  3 02:44 step.tar.gz
+$ echo '--- or in one step ---'
+--- or in one step ---
+$ tar -czf onestep.tar.gz archive_lab
+$ ls -l onestep.tar.gz
+-rw-r--r-- 1 student student 261 Nov  3 02:44 onestep.tar.gz
+
+Difference:
+  tar  = ARCHIVER: bundles many files/directories (with permissions, owners,
+         timestamps) into ONE file; it does not compress.
+  gzip = COMPRESSOR: compresses ONE file (or stream) only; it cannot hold a
+         directory.
+  Sequence: tar creates step.tar, then gzip compresses it into step.tar.gz.
+  tar -z (c z f) calls gzip internally, giving the same .tar.gz in one step.
+
+==============================================================================
+Q16. Create a tar archive, add another file, verify
+==============================================================================
+$ echo 'File four - added later' > archive_lab/file4.txt
+$ tar -cf add_demo.tar archive_lab/file1.txt archive_lab/file2.txt
+$ tar -tf add_demo.tar
+archive_lab/file1.txt
+archive_lab/file2.txt
+$ tar -rvf add_demo.tar archive_lab/file4.txt
+archive_lab/file4.txt
+$ tar -tf add_demo.tar
+archive_lab/file1.txt
+archive_lab/file2.txt
+archive_lab/file4.txt
+
+(-r appends to an existing UNCOMPRESSED tar archive; it does not work on .tar.gz)
+
+==============================================================================
+Q17. Compare contents and sizes of a tar archive and a compressed tar.gz
+==============================================================================
+$ python3 -c "open('archive_lab/big.txt','w').write('Linux archive compression test line\n'*5000)"
+$ tar -cf big.tar archive_lab
+$ tar -czf big.tar.gz archive_lab
+$ ls -l big.tar big.tar.gz
+-rw-r--r-- 1 student student 194560 Nov  3 02:44 big.tar
+-rw-r--r-- 1 student student    939 Nov  3 02:44 big.tar.gz
+$ tar -tf big.tar
+archive_lab/
+archive_lab/file2.txt
+archive_lab/file3.txt
+archive_lab/file4.txt
+archive_lab/big.txt
+archive_lab/file1.txt
+$ tar -tzf big.tar.gz
+archive_lab/
+archive_lab/file2.txt
+archive_lab/file3.txt
+archive_lab/file4.txt
+archive_lab/big.txt
+archive_lab/file1.txt
+
+Observation: both list the same files; the .tar.gz is much smaller because
+repetitive text compresses well, while .tar is just the uncompressed bundle.
+
+==============================================================================
+Q18. Decompress/extract a tar.gz and a ZIP into separate directories
+==============================================================================
+$ mkdir out_targz out_zip
+$ tar -xzf big.tar.gz -C out_targz
+$ unzip -q dir_archive.zip -d out_zip
+$ ls out_targz/archive_lab
+big.txt
+file1.txt
+file2.txt
+file3.txt
+file4.txt
+$ ls out_zip/archive_lab
+file1.txt
+file2.txt
+file3.txt
+
+==============================================================================
+Q19. Complete backup of a practice directory using tar.gz, then restore
+==============================================================================
+$ mkdir -p practice && echo 'important data' > practice/data.txt && echo 'config' > practice/app.conf
+$ tar -czvf backup_$(date +%F).tar.gz practice
+practice/
+practice/data.txt
+practice/app.conf
+$ ls -l backup_*.tar.gz
+-rw-r--r-- 1 student student 194 Nov  3 02:44 backup_2026-11-03.tar.gz
+$ rm -rf practice
+$ mkdir restore_dir
+$ tar -xzvf backup_*.tar.gz -C restore_dir
+practice/
+practice/data.txt
+practice/app.conf
+$ ls -l restore_dir/practice
+total 8
+-rw-r--r-- 1 student student  7 Nov  3 02:44 app.conf
+-rw-r--r-- 1 student student 15 Nov  3 02:44 data.txt
+$ cat restore_dir/practice/data.txt
+important data
+
+(the original was deleted to prove the restore works)
+
+==============================================================================
+Q20. Complete workflow with tar, gzip, gunzip, zip and unzip (verify each step)
+==============================================================================
+$ mkdir wf && cd wf && printf 'alpha\n' > a.txt && printf 'beta\n' > b.txt && ls
+a.txt
+b.txt
+$ cd wf && tar -cvf wf.tar a.txt b.txt && tar -tvf wf.tar
+a.txt
+b.txt
+-rw-r--r-- student/student         6 2026-11-03 02:44 a.txt
+-rw-r--r-- student/student         5 2026-11-03 02:44 b.txt
+$ cd wf && gzip -k wf.tar && ls -l wf.tar wf.tar.gz
+-rw-r--r-- 1 student student 10240 Nov  3 02:44 wf.tar
+-rw-r--r-- 1 student student   141 Nov  3 02:44 wf.tar.gz
+$ cd wf && rm wf.tar && gunzip wf.tar.gz && ls -l wf.tar
+-rw-r--r-- 1 student student 10240 Nov  3 02:44 wf.tar
+$ cd wf && zip wf.zip a.txt b.txt && unzip -l wf.zip
+  adding: a.txt (stored 0%)
+  adding: b.txt (stored 0%)
+Archive:  wf.zip
+  Length      Date    Time    Name
+---------  ---------- -----   ----
+        6  2026-11-03 02:44   a.txt
+        5  2026-11-03 02:44   b.txt
+---------                     -------
+       11                     2 files
+$ cd wf && mkdir ex && unzip -q wf.zip -d ex && tar -xf wf.tar -C ex --overwrite && ls ex && cat ex/a.txt ex/b.txt
+a.txt
+b.txt
+alpha
+beta
+$ cd wf && tar -czf all.tar.gz a.txt b.txt && tar -tzf all.tar.gz && gzip -t all.tar.gz && echo 'gzip integrity OK'
+a.txt
+b.txt
+gzip integrity OK
+
+Clean-up of lab files:  rm -rf archive_lab extracted_* *.tar *.tar.gz *.zip one_file out_* restore_dir wf
+
+Summary of options:
+  tar : c create | x extract | t list | r append | v verbose | f file | z gzip | C directory
+  gzip/gunzip : compress/decompress single files (-k keep original, -t test)
+  zip/unzip   : zip -r dir.zip dir | unzip -l (list) | unzip -d (target) | unzip -t (test)
+
+END OF LAB 11 ANSWERS

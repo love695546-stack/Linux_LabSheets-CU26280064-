@@ -1,0 +1,185 @@
+LINUX LAB 8: PACKAGE MANAGEMENT  (Subject Code UAC02P)
+rpm and dnf on Red Hat Linux / RHEL / Rocky Linux / AlmaLinux
+ANSWERS
+==============================================================================
+Test package used in this lab: "tree" (small, harmless).  Use sudo for
+install / update / remove operations.
+
+Q1. Installed RPM version; verify rpm is available.
+    $ rpm --version
+    RPM version 4.16.1.3
+    $ which rpm
+    /usr/bin/rpm
+    $ rpm -q rpm            (the rpm package itself)
+
+Q2. Installed DNF version; verify dnf is available.
+    $ dnf --version
+    4.14.0
+      Installed: dnf-0:4.14.0-9.el9.noarch ...
+    $ which dnf
+    /usr/bin/dnf
+
+Q3. Is a package installed? (search the RPM database)
+    $ rpm -q bash
+    bash-5.1.8-6.el9.x86_64                  <- installed
+    $ rpm -q tree
+    package tree is not installed            <- not installed
+    $ rpm -qa | grep bash                    (search the whole list)
+    $ rpm -qa | wc -l                        (count installed packages)
+
+Q4. Detailed information about an installed package.
+    $ rpm -qi bash
+    Name        : bash
+    Version     : 5.1.8
+    Release     : 6.el9
+    Architecture: x86_64
+    Install Date: ...
+    Size        : ...
+    License     : GPLv3+
+    Summary     : The GNU Bourne Again shell
+    ...
+
+Q5. List all files installed by an RPM package.
+    $ rpm -ql bash
+    /etc/skel/.bash_logout
+    /usr/bin/bash
+    ...
+    $ rpm -qc bash     (configuration files only)   $ rpm -qd bash (docs)
+
+Q6. Which package owns a given file?
+    $ rpm -qf /usr/bin/bash
+    bash-5.1.8-6.el9.x86_64
+    $ rpm -qf /etc/passwd
+    setup-2.13.7-9.el9.noarch
+    Also:  dnf provides /usr/bin/bash
+
+Q7. Installation date and other information for a package.
+    $ rpm -qi bash | grep -E "Install Date|Version|Release|Size"
+    $ rpm -q --qf '%{NAME}  %{VERSION}-%{RELEASE}  %{INSTALLTIME:date}\n' bash
+    bash  5.1.8-6.el9  Mon 03 Nov 2026 10:15:30 AM IST
+    $ rpm -q --last bash          (installation time)
+
+Q8. List configured DNF repositories and their enabled/disabled status.
+    $ dnf repolist              (enabled repositories)
+    repo id        repo name
+    appstream      Rocky Linux 9 - AppStream
+    baseos         Rocky Linux 9 - BaseOS
+    extras         Rocky Linux 9 - Extras
+    $ dnf repolist all          (also disabled ones: status column shows
+                                 "enabled" or "disabled")
+    $ dnf repolist --disabled
+
+Q9. Detailed information about a repository.
+    $ dnf repoinfo baseos
+    Repo-id            : baseos
+    Repo-name          : Rocky Linux 9 - BaseOS
+    Repo-status        : enabled
+    Repo-revision      : ...
+    Repo-baseurl/mirrorlist : ...
+    Repo-expire        : 172800 second(s)
+    Repo-filename      : /etc/yum.repos.d/rocky.repo
+    (repo definition files live in /etc/yum.repos.d/*.repo)
+    $ cat /etc/yum.repos.d/rocky.repo
+
+Q10. Search the repositories for a package by name/keyword.
+    $ dnf search tree
+    $ dnf search "directory listing"
+    $ dnf list available | grep tree
+    $ dnf info tree        (details of the available package)
+
+Q11. Install a package with dnf and verify.
+    $ sudo dnf install tree -y
+    ...
+    Installed:
+      tree-1.8.0-10.el9.x86_64
+    Complete!
+    $ rpm -q tree
+    tree-1.8.0-10.el9.x86_64
+    $ tree --version
+
+Q12. Install a package from an available repository; verify version with
+     rpm and dnf.
+    $ sudo dnf install wget -y          (any other package, e.g. wget, nano)
+    $ rpm -q wget
+    wget-1.21.1-7.el9.x86_64
+    $ dnf list installed wget
+    Installed Packages
+    wget.x86_64   1.21.1-7.el9   @baseos
+    $ dnf info wget                      (shows "From repo : baseos")
+    Install from a particular repository: sudo dnf install --repo=appstream pkg
+
+Q13. Show available updates without applying them.
+    $ dnf check-update
+    (list of packages with the new version and repository; exit code 100 if
+     updates exist, 0 if none)
+    $ dnf list updates
+    $ dnf updateinfo list           (security/bugfix advisories)
+
+Q14. Update one package and verify the new version.
+    $ rpm -q tree                     (version before)
+    $ sudo dnf update tree -y
+    $ rpm -q tree                     (version after)
+    "Nothing to do. Complete!" means it is already the latest version.
+
+Q15. Update all packages and verify.
+    $ sudo dnf update -y              (or  sudo dnf upgrade -y)
+    $ dnf check-update                -> no packages listed = fully updated
+    $ dnf history list | head         (the transaction is recorded)
+    (a reboot may be needed after a kernel update:  sudo reboot )
+
+Q16. Remove a test package and verify.
+    $ sudo dnf remove tree -y
+    Removed:
+      tree-1.8.0-10.el9.x86_64
+    $ rpm -q tree
+    package tree is not installed
+    $ which tree                      -> no output
+    (use  sudo dnf autoremove  to drop dependencies that are no longer needed)
+
+Q17. Identify the repository that provides a package.
+    $ dnf info tree             (the "Repository" / "From repo" line)
+    $ dnf provides tree
+    tree-1.8.0-10.el9.x86_64 : File system tree viewer
+    Repo        : appstream
+    $ dnf provides /usr/bin/tree          (by file name)
+    $ dnf repoquery --qf '%{name} %{repoid}' tree
+
+Q18. DNF transaction history.
+    $ dnf history
+    ID | Command line      | Date and time    | Action(s) | Altered
+     7 | remove tree -y    | 2026-11-03 10:40 | Removed   |  1
+     6 | update -y         | 2026-11-03 10:30 | Upgrade   | 12
+     5 | install tree -y   | 2026-11-03 10:20 | Install   |  1
+    $ dnf history info 5      (details of transaction 5 - packages involved)
+    $ sudo dnf history undo 5     (optional: reverse a transaction)
+
+Q19. Complete workflow: rpm verification + dnf install/update/remove.
+    $ rpm -q nano || echo "nano not installed"        # check with rpm
+    $ sudo dnf install nano -y                         # install
+    $ rpm -q nano ; rpm -qi nano | head -8             # verify with rpm
+    $ rpm -V nano                  (verify files: no output = unmodified)
+    $ dnf check-update nano                            # any update?
+    $ sudo dnf update nano -y                          # update
+    $ sudo dnf remove nano -y                          # remove
+    $ rpm -q nano                  -> package nano is not installed
+    $ dnf history | head -5                            # all 3 transactions
+    (use a non-essential package; if nano is already installed by default, use
+     tree/wget instead)
+
+Q20. Clean up and verify that nothing required was modified.
+    $ sudo dnf remove tree wget -y       (only the packages installed in this lab)
+    $ sudo dnf autoremove -y             (only review the list; answer n if
+                                          unsure it affects other software)
+    $ sudo dnf clean all                 (clear cached metadata/packages)
+    $ rm -f /etc/yum.repos.d/lab*.repo   (only if you created a lab repo file)
+    Verify:
+    $ rpm -q tree wget                   -> not installed
+    $ dnf repolist                       (same repositories as at the start)
+    $ rpm -Va 2>/dev/null | head         (verify the installed packages; a
+                                           small number of "c" config changes
+                                           is normal)
+    $ ls /etc/yum.repos.d/               (original .repo files unchanged)
+    $ dnf history | head                 (confirm only the lab transactions)
+
+==============================================================================
+END OF LAB 8 ANSWERS

@@ -1,0 +1,134 @@
+LINUX LAB SHEET 5: vi/vim EDITOR  (Subject Code UAC02P)
+ANSWERS
+==============================================================================
+Quick reminder - vi has three main modes:
+  Normal (command) mode : default on start; keys are commands.   (Esc returns here)
+  Insert mode           : typing inserts text.                   (i, a, o, ...)
+  Command-line mode     : starts with ":" (or / ? for searching).
+
+Q1. Create lab5.txt with vi/vim and enter at least five lines.
+    $ vim lab5.txt
+    press  i            (enter Insert mode)
+    type:
+        Linux is an open source operating system.
+        vi is a powerful text editor.
+        Linux commands are case sensitive.
+        The vi editor has three modes.
+        Practice makes perfect in Linux.
+    press  Esc          (back to Normal mode)
+    type   :wq  and Enter   (save and quit)
+    $ cat lab5.txt      (verify)
+
+Q2. Open the existing lab5.txt and display its contents.
+    $ vim lab5.txt          (contents shown in the editor)
+    $ vim -R lab5.txt       (read-only)   or   $ view lab5.txt
+    Inside vi, :set number  shows line numbers.
+
+Q3. Switch between Normal, Insert and Command-Line mode.
+    Normal -> Insert        : i  (or a, o, I, A, O)
+    Insert -> Normal        : Esc
+    Normal -> Command-line  : :   (e.g. :set number)
+    Command-line -> Normal  : Enter (after running the command) or Esc
+    The bottom-left of the screen shows "-- INSERT --" in Insert mode and
+    ":" in Command-line mode.
+
+Q4. Insert text before and after the cursor.
+    i    insert BEFORE the cursor        I   insert at the beginning of the line
+    a    append AFTER the cursor         A   append at the end of the line
+    Example: place the cursor on a word, press i, type "NEW ", press Esc;
+    then press a, type " END", press Esc. Verify on screen.
+
+Q5. Add a new line below and another above the current line.
+    o    open a new line BELOW the current line and enter Insert mode
+    O    open a new line ABOVE the current line and enter Insert mode
+    Type the text, then press Esc.
+
+Q6. Save the file without exiting.
+    :w          (Esc first if in Insert mode)
+    :w newname.txt   saves a copy under another name.
+
+Q7. Save and exit.
+    :wq         or    :x       or    ZZ   (Normal mode)
+
+Q8. Exit without saving changes.
+    :q!         (force quit and discard changes)
+    (:q alone works only if there are no unsaved changes)
+
+Q9. Move to the beginning and end of a line.
+    0  (zero)  or  ^   beginning of the line   (^ = first non-blank character)
+    $                  end of the line
+
+Q10. Move to the beginning and end of the file.
+    gg    first line of the file       (or  :1  )
+    G     last line of the file        (or  :$  )
+
+Q11. Delete a character, a word and a complete line.
+    x     delete the character under the cursor
+    dw    delete from the cursor to the end of the word
+    dd    delete the whole current line
+    (3dd deletes 3 lines; D deletes from cursor to end of line)
+
+Q12. Copy the current line and paste it below.
+    yy    yank (copy) the current line
+    p     paste BELOW the current line   (P pastes above)
+
+Q13. Copy multiple lines and paste them elsewhere.
+    3yy   copy 3 lines starting from the current line
+    move the cursor to the destination line (e.g. G or 10G)
+    p     paste below it
+    Or with ex commands:  :2,4y   (yank lines 2-4)   then   p
+
+Q14. Search forward for a word and move between matches.
+    /word  Enter      search forward
+    n      next match (same direction)
+    N      previous match (opposite direction)
+
+Q15. Search backward and move between matches.
+    ?word  Enter      search backward
+    n      next match (continues backward)
+    N      match in the opposite (forward) direction
+
+Q16. Replace the first occurrence of a word on the current line.
+    :s/old/new/
+    Example:  :s/Linux/UNIX/
+
+Q17. Replace all occurrences throughout the file.
+    :%s/old/new/g
+    Example:  :%s/Linux/UNIX/g
+    (add c to confirm each one:  :%s/old/new/gc )
+
+Q18. Undo and redo.
+    u        undo the last change
+    Ctrl+r   redo the undone change
+    (U undoes all changes on the line; :undo / :redo work too)
+
+Q19. Line numbers: show current line number and jump to a line.
+    :set number        show line numbers         (:set nonumber hides them)
+    Ctrl+g             show the current line number and file status
+    :10                jump to line 10           (also 10G)
+    :set relativenumber  optional relative numbering
+
+Q20. Complete workflow.
+    $ vim workflow.txt
+    i                   -> type four or five lines, press Esc
+    :w                  -> save
+    gg                  -> go to the top
+    /vi                 -> search, n to see the next match
+    :%s/vi/VIM/g        -> replace all
+    yy  then  G  then  p   -> copy a line and paste it at the end
+    3Gdd (or dd)        -> delete a line;  u to undo it
+    :set number         -> show line numbers
+    :wq                 -> save and exit
+    $ cat workflow.txt  -> verify the final contents
+
+Command summary
+    i a o I A O      insert/append/open line
+    x dw dd          delete char/word/line
+    yy p             copy / paste
+    u Ctrl+r         undo / redo
+    /text ?text n N  search
+    :s :%s///g       replace
+    :w :q :wq :q!    save/quit commands
+
+==============================================================================
+END OF LAB SHEET 5 ANSWERS

@@ -1,0 +1,557 @@
+LINUX ADMINISTRATION LAB SHEET - 3 (Course Code: DCS583)
+Bash Scripting - Variables, Input, Conditions, Loops, File Tests, Arguments,
+Exit Codes, Redirection and Pipelines
+ANSWERS  (all scripts below were actually executed; outputs are real)
+==============================================================================
+
+LAB SETUP
+------------------------------------------------------------------------------
+Commands:
+  $ mkdir -p ~/linux_lab3
+  $ cd ~/linux_lab3
+  $ pwd
+  $ mkdir -p data backups logs output
+  $ touch data/names.txt data/students.txt data/notes.txt
+  $ printf 'Zara\nAmit\nNeha\nRavi\nAmit\n' > data/names.txt
+  $ printf '101,Amit,85\n102,Neha,92\n103,Ravi,68\n104,Zara,76\n' > data/students.txt
+  $ printf 'Linux shell scripting\nVariables and loops\nPipes and redirection\n' > data/notes.txt
+  $ touch backups/db_01.bak backups/db_02.bak
+  $ find . -maxdepth 2 -type f -print | sort
+
+Output:
+  /home/student/linux_lab3
+  ./backups/db_01.bak
+  ./backups/db_02.bak
+  ./data/names.txt
+  ./data/notes.txt
+  ./data/students.txt
+
+Notes: every script starts with #!/bin/bash, is saved in ~/linux_lab3,
+made executable with  chmod +x script.sh  and run with  ./script.sh
+
+==============================================================================
+Q1. Hello Script
+==============================================================================
+Script: hello.sh
+----------------------------------------
+#!/bin/bash
+# hello.sh - personalised greeting using a variable
+name="Student"
+echo "Hello, $name! Welcome to Linux Bash scripting."
+----------------------------------------
+Make executable:  $ chmod +x hello.sh
+
+$ ./hello.sh
+Hello, Student! Welcome to Linux Bash scripting.
+
+$ bash hello.sh
+Hello, Student! Welcome to Linux Bash scripting.
+
+==============================================================================
+Q2. User Input Script
+==============================================================================
+Script: user_input.sh
+----------------------------------------
+#!/bin/bash
+# user_input.sh - read student details and print a welcome message
+read -p "Enter your name: " name
+read -p "Enter your branch: " branch
+read -p "Enter your semester: " sem
+echo "-----------------------------------"
+echo "Welcome, $name!"
+echo "Branch   : $branch"
+echo "Semester : $sem"
+echo "-----------------------------------"
+----------------------------------------
+Make executable:  $ chmod +x user_input.sh
+
+$ ./user_input.sh      # input given: Amit / CSE / 5
+-----------------------------------
+Welcome, Amit!
+Branch   : CSE
+Semester : 5
+-----------------------------------
+
+==============================================================================
+Q3. Arithmetic Calculator
+==============================================================================
+Script: calculator.sh
+----------------------------------------
+#!/bin/bash
+# calculator.sh - basic arithmetic on two integers
+read -p "Enter first number : " a
+read -p "Enter second number: " b
+echo "Sum        : $((a + b))"
+echo "Difference : $((a - b))"
+echo "Product    : $((a * b))"
+if [ "$b" -eq 0 ]; then
+    echo "Quotient   : undefined (division by zero)"
+else
+    echo "Quotient   : $((a / b))"
+fi
+----------------------------------------
+Make executable:  $ chmod +x calculator.sh
+
+$ ./calculator.sh      # input given: 20 / 6
+Sum        : 26
+Difference : 14
+Product    : 120
+Quotient   : 3
+
+$ ./calculator.sh      # input given: 10 / 0
+Sum        : 10
+Difference : 10
+Product    : 0
+Quotient   : undefined (division by zero)
+
+==============================================================================
+Q4. Command Substitution
+==============================================================================
+Script: system_info.sh
+----------------------------------------
+#!/bin/bash
+# system_info.sh - command substitution
+cur_date=$(date)
+cur_dir=$(pwd)
+user_name=$(whoami)
+echo "Current date      : $cur_date"
+echo "Working directory : $cur_dir"
+echo "Logged-in user    : $user_name"
+----------------------------------------
+Make executable:  $ chmod +x system_info.sh
+
+$ ./system_info.sh
+Current date      : Tue Nov  3 02:39:38 UTC 2026
+Working directory : /home/student/linux_lab3
+Logged-in user    : root
+
+==============================================================================
+Q5. Number Classification
+==============================================================================
+Script: number_type.sh
+----------------------------------------
+#!/bin/bash
+# number_type.sh - positive / negative / zero
+read -p "Enter an integer: " n
+if [ "$n" -gt 0 ]; then
+    echo "$n is Positive"
+elif [ "$n" -lt 0 ]; then
+    echo "$n is Negative"
+else
+    echo "The number is Zero"
+fi
+----------------------------------------
+Make executable:  $ chmod +x number_type.sh
+
+$ ./number_type.sh      # input given: 25
+25 is Positive
+
+$ ./number_type.sh      # input given: -7
+-7 is Negative
+
+$ ./number_type.sh      # input given: 0
+The number is Zero
+
+==============================================================================
+Q6. Even or Odd
+==============================================================================
+Script: even_odd.sh
+----------------------------------------
+#!/bin/bash
+# even_odd.sh - takes one integer as $1
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <integer>"
+    exit 1
+fi
+if [ $(( $1 % 2 )) -eq 0 ]; then
+    echo "$1 is Even"
+else
+    echo "$1 is Odd"
+fi
+----------------------------------------
+Make executable:  $ chmod +x even_odd.sh
+
+$ ./even_odd.sh 12
+12 is Even
+
+$ ./even_odd.sh 7
+7 is Odd
+
+$ ./even_odd.sh; echo "Exit status: $?"
+Usage: ./even_odd.sh <integer>
+Exit status: 1
+
+==============================================================================
+Q7. File and Directory Tests
+==============================================================================
+Script: file_check.sh
+----------------------------------------
+#!/bin/bash
+# file_check.sh - regular file / directory / neither
+if [ -z "$1" ]; then
+    echo "Usage: $0 <path>"
+    exit 1
+fi
+if [ -f "$1" ]; then
+    echo "$1 is a regular file."
+    if [ -x "$1" ]; then
+        echo "It is executable."
+    else
+        echo "It is NOT executable."
+    fi
+elif [ -d "$1" ]; then
+    echo "$1 is a directory."
+else
+    echo "$1 is neither a regular file nor a directory (or does not exist)."
+fi
+----------------------------------------
+Make executable:  $ chmod +x file_check.sh
+
+$ ./file_check.sh data/names.txt
+data/names.txt is a regular file.
+It is NOT executable.
+
+$ ./file_check.sh hello.sh
+hello.sh is a regular file.
+It is executable.
+
+$ ./file_check.sh data
+data is a directory.
+
+$ ./file_check.sh /nonexistent
+/nonexistent is neither a regular file nor a directory (or does not exist).
+
+==============================================================================
+Q8. For Loop Practice
+==============================================================================
+Script: multiplication.sh
+----------------------------------------
+#!/bin/bash
+# multiplication.sh - table of $1 from 1 to 10
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <number>"
+    exit 1
+fi
+for i in {1..10}
+do
+    echo "$1 x $i = $(( $1 * i ))"
+done
+----------------------------------------
+Make executable:  $ chmod +x multiplication.sh
+
+$ ./multiplication.sh 5
+5 x 1 = 5
+5 x 2 = 10
+5 x 3 = 15
+5 x 4 = 20
+5 x 5 = 25
+5 x 6 = 30
+5 x 7 = 35
+5 x 8 = 40
+5 x 9 = 45
+5 x 10 = 50
+
+==============================================================================
+Q9. Loop Through Files
+==============================================================================
+Script: list_txt.sh
+----------------------------------------
+#!/bin/bash
+# list_txt.sh - loop through all .txt files in data/
+for f in data/*.txt
+do
+    echo "Found text file: $(basename "$f")"
+done
+----------------------------------------
+Make executable:  $ chmod +x list_txt.sh
+
+$ ./list_txt.sh
+Found text file: names.txt
+Found text file: notes.txt
+Found text file: students.txt
+
+==============================================================================
+Q10. While Loop
+==============================================================================
+Script: countdown.sh
+----------------------------------------
+#!/bin/bash
+# countdown.sh - countdown from 10 to 1
+count=10
+while [ $count -ge 1 ]
+do
+    echo $count
+    count=$((count - 1))
+done
+echo "Done!"
+----------------------------------------
+Make executable:  $ chmod +x countdown.sh
+
+$ ./countdown.sh
+10
+9
+8
+7
+6
+5
+4
+3
+2
+1
+Done!
+
+==============================================================================
+Q11. Script Arguments
+==============================================================================
+Script: arguments.sh
+----------------------------------------
+#!/bin/bash
+# arguments.sh - positional parameters
+echo "Script name (\$0)      : $0"
+echo "First arg   (\$1)      : $1"
+echo "Second arg  (\$2)      : $2"
+echo "Arg count   (\$#)      : $#"
+echo "All args    (\$@)      : $@"
+----------------------------------------
+Make executable:  $ chmod +x arguments.sh
+
+$ ./arguments.sh apple banana
+Script name ($0)      : ./arguments.sh
+First arg   ($1)      : apple
+Second arg  ($2)      : banana
+Arg count   ($#)      : 2
+All args    ($@)      : apple banana
+
+$ ./arguments.sh Linux Bash Shell Script
+Script name ($0)      : ./arguments.sh
+First arg   ($1)      : Linux
+Second arg  ($2)      : Bash
+Arg count   ($#)      : 4
+All args    ($@)      : Linux Bash Shell Script
+
+==============================================================================
+Q12. Exit Codes
+==============================================================================
+Script: status.sh
+----------------------------------------
+#!/bin/bash
+# status.sh - exit 0 if directory exists, else exit 1
+if [ -d "$1" ]; then
+    echo "Directory '$1' exists."
+    exit 0
+else
+    echo "Directory '$1' does not exist."
+    exit 1
+fi
+----------------------------------------
+Make executable:  $ chmod +x status.sh
+
+$ ./status.sh data; echo "Exit code: $?"
+Directory 'data' exists.
+Exit code: 0
+
+$ ./status.sh nodir; echo "Exit code: $?"
+Directory 'nodir' does not exist.
+Exit code: 1
+
+==============================================================================
+Q13. Output Redirection
+==============================================================================
+Commands:
+  $ ls data > output/files.txt        # > overwrites the file
+  $ cat output/files.txt
+  $ ls data >> output/files.txt       # >> appends to the file
+  $ cat output/files.txt
+  $ echo "Overwritten!" > output/files.txt   # > again - old content lost
+  $ cat output/files.txt
+
+$ ls data > output/files.txt
+$ cat output/files.txt
+names.txt
+notes.txt
+students.txt
+$ ls data >> output/files.txt
+$ cat output/files.txt
+names.txt
+notes.txt
+students.txt
+names.txt
+notes.txt
+students.txt
+$ echo 'Overwritten!' > output/files.txt
+$ cat output/files.txt
+Overwritten!
+
+Difference: '>' creates/overwrites (old content lost); '>>' appends to the end.
+
+==============================================================================
+Q14. Append a Log
+==============================================================================
+Script: log_entry.sh
+----------------------------------------
+#!/bin/bash
+# log_entry.sh - append timestamp + message to logs/activity.log
+read -p "Enter log message: " msg
+echo "$(date '+%Y-%m-%d %H:%M:%S') - $msg" >> logs/activity.log
+echo "Entry added to logs/activity.log"
+----------------------------------------
+Make executable:  $ chmod +x log_entry.sh
+
+$ ./log_entry.sh      # input given: System started
+Entry added to logs/activity.log
+
+$ ./log_entry.sh      # input given: Backup completed
+Entry added to logs/activity.log
+
+$ cat logs/activity.log
+2026-11-03 02:39:38 - System started
+2026-11-03 02:39:38 - Backup completed
+
+==============================================================================
+Q15. Input Redirection and Sorting
+==============================================================================
+Commands:
+$ sort < data/names.txt
+Amit
+Amit
+Neha
+Ravi
+Zara
+
+$ sort < data/names.txt | uniq
+Amit
+Neha
+Ravi
+Zara
+
+$ sort -u < data/names.txt
+Amit
+Neha
+Ravi
+Zara
+
+(uniq only removes ADJACENT duplicates, so sort must come first.)
+
+==============================================================================
+Q16. Error Logging
+==============================================================================
+$ ls /nonexistent_folder 2> logs/errors.log
+$ cat logs/errors.log
+ls: cannot access '/nonexistent_folder': No such file or directory
+(2> redirects only standard error; the terminal stays empty.)
+
+==============================================================================
+Q17. Combined Output and Error Logging
+==============================================================================
+$ ls data /nonexistent_folder > logs/combined.log 2>&1
+$ cat logs/combined.log
+ls: cannot access '/nonexistent_folder': No such file or directory
+data:
+names.txt
+notes.txt
+students.txt
+(Equivalent shorter form in bash:  ls data /nonexistent_folder &> logs/combined.log)
+
+==============================================================================
+Q18. Pipeline Practice
+==============================================================================
+$ ps aux | grep bash | grep -v grep | head -3
+
+
+$ ps aux | grep bash | grep -v grep | wc -l
+0
+
+(ps listing / grep filter / wc -l counts the matching lines)
+
+==============================================================================
+Q19. Backup Checker Script
+==============================================================================
+Script: backup_check.sh
+----------------------------------------
+#!/bin/bash
+# backup_check.sh <directory>
+if [ -z "$1" ] || [ ! -d "$1" ]; then
+    echo "Error: '$1' is not a valid directory."
+    echo "Usage: $0 <directory>"
+    exit 1
+fi
+count=0
+for f in "$1"/*.bak
+do
+    if [ -f "$f" ]; then
+        echo "Backup found: $f"
+        count=$((count + 1))
+    fi
+done
+echo "Total .bak files: $count"
+if [ "$count" -eq 0 ]; then
+    echo "$(date '+%F %T') - No backup files found in $1" >> logs/backup_log.txt
+fi
+----------------------------------------
+Make executable:  $ chmod +x backup_check.sh
+
+$ ./backup_check.sh backups
+Backup found: backups/db_01.bak
+Backup found: backups/db_02.bak
+Total .bak files: 2
+
+$ ./backup_check.sh data
+Total .bak files: 0
+
+$ cat logs/backup_log.txt
+2026-11-03 02:39:38 - No backup files found in data
+
+$ ./backup_check.sh nodir; echo "Exit: $?"
+Error: 'nodir' is not a valid directory.
+Usage: ./backup_check.sh <directory>
+Exit: 1
+
+==============================================================================
+Q20. Integrated File Report
+==============================================================================
+Script: file_report.sh
+----------------------------------------
+#!/bin/bash
+# file_report.sh <filename>
+if [ $# -ne 1 ]; then
+    echo "Usage: $0 <filename>"
+    exit 1
+fi
+file="$1"
+if [ ! -e "$file" ]; then
+    echo "Error: '$file' does not exist."
+    echo "$(date '+%F %T') - FAILED: $file not found" >> logs/execution_history.log
+    exit 2
+fi
+if [ ! -r "$file" ]; then
+    echo "Error: '$file' is not readable."
+    echo "$(date '+%F %T') - FAILED: $file not readable" >> logs/execution_history.log
+    exit 3
+fi
+echo "Report for: $file"
+echo "Lines      : $(wc -l < "$file")"
+echo "Words      : $(wc -w < "$file")"
+echo "Characters : $(wc -m < "$file")"
+echo "$(date '+%F %T') - Processed: $file" >> logs/execution_history.log
+----------------------------------------
+Make executable:  $ chmod +x file_report.sh
+
+$ ./file_report.sh data/notes.txt
+Report for: data/notes.txt
+Lines      : 3
+Words      : 9
+Characters : 64
+
+$ ./file_report.sh missing.txt; echo "Exit: $?"
+Error: 'missing.txt' does not exist.
+Exit: 2
+
+$ ./file_report.sh; echo "Exit: $?"
+Usage: ./file_report.sh <filename>
+Exit: 1
+
+$ cat logs/execution_history.log
+2026-11-03 02:39:38 - Processed: data/notes.txt
+2026-11-03 02:39:38 - FAILED: missing.txt not found
+
+END OF LAB SHEET 3 ANSWERS

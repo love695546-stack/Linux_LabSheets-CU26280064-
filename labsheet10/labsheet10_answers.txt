@@ -1,0 +1,204 @@
+LINUX LAB 10: FILE SYSTEMS  (Subject Code UAC02P)
+mkfs, mount, /etc/fstab and file-system checking utilities
+ANSWERS
+==============================================================================
+Test partition used: /dev/sdb1 (a dedicated practice partition on a spare
+virtual disk, or a loop device partition such as /dev/loop0p1).
+NEVER use the system disk. UUID values below are examples - use your own.
+
+Q1. Display block devices and identify a dedicated test partition.
+    $ lsblk
+    NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+    sda      8:0    0   40G  0 disk
+    |-sda1   8:1    0   39G  0 part /
+    sdb      8:16   0    2G  0 disk
+    `-sdb1   8:17   0    1G  0 part
+    sdb1 has no mount point and no system data - it is the test partition.
+    (If it does not exist: sudo fdisk /dev/sdb  -> n, p, 1, Enter, +1G, w)
+
+Q2. Current file-system type, UUID and mount-point information.
+    $ lsblk -f /dev/sdb1
+    NAME FSTYPE FSVER LABEL UUID FSAVAIL FSUSE% MOUNTPOINTS
+    sdb1                                                        (empty = no file system yet)
+    $ sudo blkid /dev/sdb1          (no output when no file system exists)
+    $ findmnt /dev/sdb1             (no output when not mounted)
+
+Q3. Create an ext4 file system with mkfs and verify.
+    $ sudo mkfs.ext4 /dev/sdb1          (same as  mkfs -t ext4 /dev/sdb1)
+    mke2fs 1.46.5 (30-Dec-2021)
+    Creating filesystem with 262144 4k blocks and 65536 inodes
+    Filesystem UUID: 5b1c7a22-3f4e-4d52-9c61-0e7d2a9b1f44
+    ...
+    Writing superblocks and filesystem accounting information: done
+    $ lsblk -f /dev/sdb1
+    sdb1 ext4 1.0  5b1c7a22-3f4e-4d52-9c61-0e7d2a9b1f44
+
+Q4. Detailed file-system information; identify the UUID.
+    $ sudo blkid /dev/sdb1
+    /dev/sdb1: UUID="5b1c7a22-3f4e-4d52-9c61-0e7d2a9b1f44" TYPE="ext4" PARTUUID="..."
+    $ sudo tune2fs -l /dev/sdb1 | head -15
+    Filesystem UUID:          5b1c7a22-3f4e-4d52-9c61-0e7d2a9b1f44
+    Filesystem magic number:  0xEF53
+    Filesystem state:         clean
+    Block size:               4096
+    $ sudo dumpe2fs -h /dev/sdb1          (full superblock details)
+
+Q5. Create the mount point /mnt/labfs.
+    $ sudo mkdir /mnt/labfs
+    $ ls -ld /mnt/labfs
+
+Q6. Mount manually on /mnt/labfs and verify.
+    $ sudo mount /dev/sdb1 /mnt/labfs
+    $ findmnt /mnt/labfs
+    TARGET     SOURCE    FSTYPE OPTIONS
+    /mnt/labfs /dev/sdb1 ext4   rw,relatime
+    $ mount | grep labfs
+
+Q7. df: total, used and available space.
+    $ df -hT /mnt/labfs
+    Filesystem     Type  Size  Used Avail Use% Mounted on
+    /dev/sdb1      ext4  974M   24K  907M   1% /mnt/labfs
+    (used space is small because of the lost+found directory and metadata)
+
+Q8. Create a test file and verify it is on the mounted file system.
+    $ echo "labfs test" | sudo tee /mnt/labfs/test.txt
+    $ ls -l /mnt/labfs
+    drwx------ 2 root root 16384 ... lost+found
+    -rw-r--r-- 1 root root    11 ... test.txt
+    $ df /mnt/labfs/test.txt              (Filesystem column = /dev/sdb1)
+
+Q9. Unmount and verify /mnt/labfs is no longer a mount point.
+    $ cd ~
+    $ sudo umount /mnt/labfs
+    $ findmnt /mnt/labfs                  -> no output
+    $ mountpoint /mnt/labfs
+    /mnt/labfs is not a mountpoint
+    $ ls /mnt/labfs                       -> empty
+
+Q10. Display /etc/fstab and identify the fields.
+    $ cat /etc/fstab
+    # <file system>                           <mount point> <type> <options>  <dump> <pass>
+    UUID=a1b2c3d4-...                          /             ext4   errors=remount-ro 0 1
+    UUID=9f8e7d6c-...                          none          swap   sw          0 0
+    Field 1  file system : device, UUID=..., LABEL=... (UUID is preferred)
+    Field 2  mount point : directory where it is mounted (none for swap)
+    Field 3  type        : ext4, xfs, vfat, swap, ...
+    Field 4  options     : defaults, noatime, ro, rw, noauto, nofail, ...
+    Field 5  dump        : 0 = do not back up with dump, 1 = back up
+    Field 6  pass        : fsck order at boot (1 = root, 2 = other, 0 = skip)
+
+Q11. Add an /etc/fstab entry using the UUID.
+    $ sudo cp /etc/fstab /etc/fstab.bak                  (always back up first)
+    $ sudo blkid -s UUID -o value /dev/sdb1               (get the UUID)
+    5b1c7a22-3f4e-4d52-9c61-0e7d2a9b1f44
+    $ sudo nano /etc/fstab        and add as the last line:
+    UUID=5b1c7a22-3f4e-4d52-9c61-0e7d2a9b1f44  /mnt/labfs  ext4  defaults,nofail  0 2
+    or in one command:
+    $ echo "UUID=5b1c7a22-3f4e-4d52-9c61-0e7d2a9b1f44 /mnt/labfs ext4 defaults,nofail 0 2" | sudo tee -a /etc/fstab
+    (nofail prevents boot problems if the device is missing)
+
+Q12. Verify the fstab syntax and test without rebooting.
+    $ sudo findmnt --verify              (checks fstab syntax and sources)
+    Success, no errors or warnings detected
+    $ sudo mount -a                      (mounts every fstab entry not mounted)
+    $ findmnt /mnt/labfs                 (confirms it was mounted from fstab)
+    $ systemctl daemon-reload            (on systemd systems after editing fstab)
+    Any error message from mount -a means the line must be corrected BEFORE
+    rebooting.
+
+Q13. Reboot/remount and verify automatic mounting.
+    Without reboot:    $ sudo umount /mnt/labfs ; sudo mount -a ; findmnt /mnt/labfs
+    With reboot:       $ sudo reboot
+                       (after login)  $ findmnt /mnt/labfs
+                       /mnt/labfs /dev/sdb1 ext4 rw,relatime
+                       $ df -h /mnt/labfs
+
+Q14. findmnt and df for device, mount point, type and usage.
+    $ findmnt /mnt/labfs
+    TARGET     SOURCE    FSTYPE OPTIONS
+    /mnt/labfs /dev/sdb1 ext4   rw,relatime
+    $ findmnt -o TARGET,SOURCE,FSTYPE,SIZE,USED,AVAIL,USE% /mnt/labfs
+    $ df -hT /mnt/labfs
+    Filesystem     Type  Size  Used Avail Use% Mounted on
+    /dev/sdb1      ext4  974M   28K  907M   1% /mnt/labfs
+
+Q15. Compare the file-system UUID with the UUID in /etc/fstab.
+    $ sudo blkid -s UUID -o value /dev/sdb1
+    5b1c7a22-3f4e-4d52-9c61-0e7d2a9b1f44
+    $ grep labfs /etc/fstab
+    UUID=5b1c7a22-3f4e-4d52-9c61-0e7d2a9b1f44 /mnt/labfs ext4 defaults,nofail 0 2
+    Both strings must be identical. Check automatically:
+    $ diff <(sudo blkid -s UUID -o value /dev/sdb1) <(grep labfs /etc/fstab | sed 's/UUID=\([^ ]*\).*/\1/')
+    (no output = identical).  A mismatch (e.g. after re-running mkfs, which
+    creates a NEW UUID) leaves the entry pointing to a non-existent device.
+
+Q16. Check the (unmounted) test file system.
+    $ sudo umount /mnt/labfs
+    $ sudo fsck /dev/sdb1               (or  sudo e2fsck -f /dev/sdb1)
+    e2fsck 1.46.5
+    Pass 1: Checking inodes, blocks, and sizes
+    Pass 2: Checking directory structure
+    Pass 3: Checking directory connectivity
+    Pass 4: Checking reference counts
+    Pass 5: Checking group summary information
+    /dev/sdb1: 12/65536 files (0.0% non-contiguous), 12345/262144 blocks
+    (-f forces a check even if marked clean;  -n = read-only check;
+     xfs uses  xfs_repair -n /dev/sdb1 )
+
+Q17. Checking a mounted vs an unmounted file system.
+    Mounted (precaution: read-only test only):
+    $ sudo mount /dev/sdb1 /mnt/labfs
+    $ sudo fsck -n /dev/sdb1
+    WARNING!!! The filesystem is mounted. (or: "/dev/sdb1 is mounted.")
+    ... may report false errors because the file system is changing while it
+    is being checked. Do NOT run fsck -f / repair mode on a mounted file
+    system - it can corrupt data.
+    Unmounted (correct way):
+    $ sudo umount /mnt/labfs
+    $ sudo fsck -f /dev/sdb1             -> clean, reliable result
+    Summary: check only UNMOUNTED file systems (or mounted read-only /
+    boot-time for the root file system); use -n on a mounted one just to look.
+
+Q18. Correct an intentionally incorrect /etc/fstab entry.
+    Wrong entry (typo in the UUID / mount point):
+    UUID=5b1c7a22-0000-0000-0000-0e7d2a9b1f44  /mnt/labfs  ext4  defaults  0 2
+    $ sudo mount -a
+    mount: /mnt/labfs: can't find UUID=5b1c7a22-0000-...
+    $ sudo findmnt --verify              (reports the unreachable source)
+    Fix: get the right UUID and edit the line:
+    $ sudo blkid -s UUID -o value /dev/sdb1
+    $ sudo nano /etc/fstab               (correct the UUID)
+    or:
+    $ sudo sed -i 's/5b1c7a22-0000-0000-0000-0e7d2a9b1f44/5b1c7a22-3f4e-4d52-9c61-0e7d2a9b1f44/' /etc/fstab
+    $ sudo mount -a ; findmnt /mnt/labfs
+    /mnt/labfs /dev/sdb1 ext4 rw,relatime       <- now mounted successfully
+
+Q19. Unmount, remove the lab fstab entry, verify no automatic mount.
+    $ sudo umount /mnt/labfs
+    $ sudo sed -i '\#/mnt/labfs#d' /etc/fstab          (or edit with nano/vim)
+    $ grep labfs /etc/fstab                              -> no output
+    $ sudo systemctl daemon-reload
+    $ sudo mount -a ; findmnt /mnt/labfs                 -> not mounted
+    After the next reboot the file system will not be mounted automatically.
+    Compare with the backup:  diff /etc/fstab /etc/fstab.bak  -> no differences
+
+Q20. Complete file-system workflow.
+    $ sudo cp /etc/fstab /etc/fstab.bak                         # backup
+    $ sudo mkfs.ext4 /dev/sdb1                                  # 1. create fs
+    $ sudo mkdir -p /mnt/labfs
+    $ sudo mount /dev/sdb1 /mnt/labfs                           # 2. mount
+    $ echo "ok" | sudo tee /mnt/labfs/check.txt
+    $ df -hT /mnt/labfs ; findmnt /mnt/labfs ; lsblk -f /dev/sdb1   # 3. verify
+    $ UUID=$(sudo blkid -s UUID -o value /dev/sdb1)
+    $ echo "UUID=$UUID /mnt/labfs ext4 defaults,nofail 0 2" | sudo tee -a /etc/fstab   # 4. fstab
+    $ sudo umount /mnt/labfs
+    $ sudo findmnt --verify ; sudo mount -a ; findmnt /mnt/labfs      # test fstab
+    $ sudo umount /mnt/labfs
+    $ sudo fsck -f /dev/sdb1                                    # 5. check (unmounted)
+    $ sudo sed -i '\#/mnt/labfs#d' /etc/fstab                   # 6. remove the entry
+    $ sudo rmdir /mnt/labfs                                     # clean up
+    $ diff /etc/fstab /etc/fstab.bak && echo "fstab restored"
+    $ findmnt /mnt/labfs ; lsblk                                 # final state
+
+==============================================================================
+END OF LAB 10 ANSWERS

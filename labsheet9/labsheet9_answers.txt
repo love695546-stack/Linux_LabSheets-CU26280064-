@@ -1,0 +1,193 @@
+LINUX LAB 9: DISK & STORAGE MANAGEMENT  (Subject Code UAC02P)
+df, du, lsblk, partitioning, mounting and unmounting
+ANSWERS
+==============================================================================
+SAFETY: never partition or format the system disk (usually /dev/sda or
+/dev/nvme0n1 holding "/"). Use a dedicated test disk, e.g. an extra virtual
+disk /dev/sdb added in VirtualBox/VMware.  In this answer sheet the test disk
+is /dev/sdb and its first partition /dev/sdb1.  If you cannot add a disk, a
+loop device gives the same practice:
+    $ dd if=/dev/zero of=~/testdisk.img bs=1M count=200
+    $ sudo losetup -fP --show ~/testdisk.img        (prints e.g. /dev/loop0)
+    then use /dev/loop0 in place of /dev/sdb   (partition = /dev/loop0p1)
+
+Q1. Mounted file systems and disk-space usage.
+    $ df
+    Filesystem     1K-blocks    Used Available Use% Mounted on
+    /dev/sda1       41152812 9876544  29179644  26% /
+    tmpfs            2008208       0   2008208   0% /dev/shm
+
+Q2. Human-readable df and the fields.
+    $ df -h
+    Filesystem      Size  Used Avail Use% Mounted on
+    /dev/sda1        40G  9.5G   28G  26% /
+    Filesystem = device / file system name     Size = total size
+    Used = space used     Avail = space available
+    Use% = percentage used     Mounted on = mount point
+    $ df -hT       (adds the file-system type column)
+
+Q3. Size of the current directory and its contents with du.
+    $ du
+    4       ./dir1
+    12      .
+    (sizes in 1K blocks, one line per subdirectory)
+    $ du -s .      (only the total)
+
+Q4. Human-readable directory sizes; which consume the most space.
+    $ du -h
+    $ du -h --max-depth=1 /var | sort -rh | head
+    1.2G    /var
+    900M    /var/lib
+    200M    /var/cache
+    (sort -rh = reverse human-numeric sort, biggest first)
+
+Q5. Size of a directory including its subdirectories.
+    $ du -sh /var/log          (-s = summary total, -h = human readable)
+    $ du -ah /var/log | tail   (-a = include files too)
+    $ du -h --max-depth=2 /home/student
+
+Q6. All block devices, disks and partitions.
+    $ lsblk
+    NAME   MAJ:MIN RM  SIZE RO TYPE MOUNTPOINTS
+    sda      8:0    0   40G  0 disk
+    |-sda1   8:1    0   39G  0 part /
+    |-sda2   8:2    0    1G  0 part [SWAP]
+    sdb      8:16   0    2G  0 disk
+    sr0     11:0    1 1024M  0 rom
+
+Q7. Identify disk names, partitions, sizes, types, mount points.
+    From the lsblk output above:
+      NAME        : sda, sda1, sda2, sdb (device names)
+      SIZE        : 40G, 39G, 1G, 2G
+      TYPE        : disk, part, rom (loop for loop devices)
+      MOUNTPOINTS : / and [SWAP]; sdb has none (not mounted)
+    $ lsblk -o NAME,SIZE,TYPE,MOUNTPOINT      (selected columns)
+
+Q8. Additional file-system information using lsblk.
+    $ lsblk -f
+    NAME   FSTYPE FSVER LABEL UUID                                 FSAVAIL FSUSE% MOUNTPOINTS
+    sda1   ext4   1.0         a1b2c3d4-....                            28G    26% /
+    $ lsblk -fm       $ lsblk -o NAME,FSTYPE,UUID,SIZE,MOUNTPOINT
+
+Q9. Currently mounted file systems and mount points.
+    $ findmnt
+    $ findmnt -t ext4,xfs          (only real disk file systems)
+    $ findmnt /
+    TARGET SOURCE    FSTYPE OPTIONS
+    /      /dev/sda1 ext4   rw,relatime
+    Alternatives:  mount | column -t     or     cat /proc/mounts
+
+Q10. Create /mnt/labdisk and verify.
+    $ sudo mkdir /mnt/labdisk
+    $ ls -ld /mnt/labdisk
+    drwxr-xr-x 2 root root 4096 Nov  3 11:00 /mnt/labdisk
+    $ stat /mnt/labdisk
+
+Q11. Attach a test partition to /mnt/labdisk and verify.
+    (the partition /dev/sdb1 already has a file system - see Q17/Q18 to create
+     one first if it does not)
+    $ sudo mount /dev/sdb1 /mnt/labdisk
+    $ findmnt /mnt/labdisk
+    TARGET        SOURCE    FSTYPE OPTIONS
+    /mnt/labdisk  /dev/sdb1 ext4   rw,relatime
+    $ lsblk /dev/sdb         (MOUNTPOINTS column shows /mnt/labdisk)
+    $ mount | grep labdisk
+
+Q12. Disk usage of the mounted file system.
+    $ df -h /mnt/labdisk
+    Filesystem      Size  Used Avail Use% Mounted on
+    /dev/sdb1       2.0G   24K  1.9G   1% /mnt/labdisk
+
+Q13. Create a test file in /mnt/labdisk and verify it is on that file system.
+    $ echo "Hello Lab Disk" | sudo tee /mnt/labdisk/test.txt
+    $ ls -l /mnt/labdisk
+    $ cat /mnt/labdisk/test.txt
+    $ df /mnt/labdisk/test.txt       (Filesystem column shows /dev/sdb1)
+    $ findmnt -T /mnt/labdisk/test.txt
+
+Q14. Unmount /mnt/labdisk and verify.
+    $ cd ~                                    (leave the mount point)
+    $ sudo umount /mnt/labdisk
+    $ findmnt /mnt/labdisk                    -> no output
+    $ mount | grep labdisk                    -> no output
+    $ ls /mnt/labdisk                         -> empty (file hidden because the
+                                                  partition is not mounted)
+
+Q15. Unmounting a busy file system.
+    $ cd /mnt/labdisk          (a shell is using it - the cause of "busy")
+    (second terminal)
+    $ sudo umount /mnt/labdisk
+    umount: /mnt/labdisk: target is busy.
+    Why: a process still has the file system in use (current directory inside
+    it, an open file, an editor, a running program).
+    Identify the process:
+    $ sudo lsof +f -- /mnt/labdisk
+    $ sudo fuser -vm /mnt/labdisk
+                        USER   PID ACCESS COMMAND
+    /mnt/labdisk:       student 4321 ..c.. bash
+    Release safely:
+    - simply  cd ~  in that shell, close the file/editor, or
+    - stop the process:  kill 4321   (if not needed; SIGTERM first)
+    $ sudo umount /mnt/labdisk                -> succeeds
+    (avoid  umount -f  and  umount -l  except as a last resort; avoid
+     "fuser -km" which kills every process)
+
+Q16. Partition table of a selected disk.
+    $ sudo fdisk -l /dev/sdb
+    Disk /dev/sdb: 2 GiB, 2147483648 bytes, 4194304 sectors
+    Disklabel type: gpt
+    Device     Start     End Sectors Size Type
+    /dev/sdb1   2048 4194270 4192223   2G Linux filesystem
+    $ sudo parted /dev/sdb print          $ sudo lsblk /dev/sdb
+
+Q17. Create a practice partition (test disk only) and verify with lsblk.
+    $ sudo fdisk /dev/sdb
+    Command (m for help): n          new partition
+    Partition type: p (primary)  Partition number: 1  (Enter)
+    First sector: (Enter)   Last sector: +1G   (Enter)
+    Command: p                       print and check
+    Command: w                       write the changes and exit
+    $ sudo partprobe /dev/sdb         (re-read the partition table)
+    $ lsblk /dev/sdb
+    NAME   MAJ:MIN RM SIZE RO TYPE MOUNTPOINTS
+    sdb      8:16   0   2G  0 disk
+    `-sdb1   8:17   0   1G  0 part
+    Non-interactive alternative:
+    $ sudo parted -s /dev/sdb mklabel gpt mkpart primary ext4 1MiB 1GiB
+
+Q18. Create a file system, mount on /mnt/labdisk, verify with df/lsblk/findmnt.
+    $ sudo mkfs.ext4 /dev/sdb1                (or  mkfs -t ext4 /dev/sdb1)
+    $ sudo mount /dev/sdb1 /mnt/labdisk
+    $ df -hT /mnt/labdisk
+    Filesystem     Type  Size Used Avail Use% Mounted on
+    /dev/sdb1      ext4  974M  24K  907M   1% /mnt/labdisk
+    $ lsblk -f /dev/sdb
+    $ findmnt /mnt/labdisk
+    (for xfs on RHEL:  sudo mkfs.xfs /dev/sdb1)
+
+Q19. Unmount the practice file system and verify.
+    $ cd ~
+    $ sudo umount /mnt/labdisk
+    $ findmnt /mnt/labdisk                    -> no output (not mounted)
+    $ ls -A /mnt/labdisk                      -> empty directory remains
+    $ lsblk /dev/sdb                          -> sdb1 still exists, MOUNTPOINTS empty
+    $ lsblk -f /dev/sdb                       -> ext4 file system still present
+    $ df -h | grep sdb1                       -> no output
+    (the partition and file system remain on the disk; only the mount is gone)
+
+Q20. Complete workflow.
+    $ lsblk ; sudo fdisk -l /dev/sdb              # 1. inspect disks and partitions
+    $ df -h ; du -sh /var/log                      # 2. check disk usage
+    $ sudo parted -s /dev/sdb mklabel gpt mkpart primary ext4 1MiB 100%   # partition
+    $ sudo mkfs.ext4 /dev/sdb1                     # file system
+    $ sudo mkdir -p /mnt/labdisk
+    $ sudo mount /dev/sdb1 /mnt/labdisk            # 3. mount test partition
+    $ echo "workflow data" | sudo tee /mnt/labdisk/data.txt   # 4. create data
+    $ cat /mnt/labdisk/data.txt ; df -h /mnt/labdisk ; findmnt /mnt/labdisk   # verify
+    $ cd ~ ; sudo umount /mnt/labdisk              # 5. unmount
+    $ findmnt /mnt/labdisk ; lsblk                 # 6. confirm final state
+    Clean-up (optional, test disk only): sudo wipefs -a /dev/sdb ; sudo rmdir /mnt/labdisk
+    (loop device: sudo losetup -d /dev/loop0 ; rm ~/testdisk.img)
+
+==============================================================================
+END OF LAB 9 ANSWERS

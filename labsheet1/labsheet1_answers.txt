@@ -1,0 +1,231 @@
+LINUX ADMINISTRATION LAB SHEET - 1 (Course Code: DCS583)
+Basic Linux Commands - 50 Practice Problems
+ANSWERS
+==============================================================================
+
+------------------------------ SECTION A - EASY ------------------------------
+
+Q1. Print the current working directory.
+    $ pwd
+    /home/student
+
+Q2. List all files and directories in the current location.
+    $ ls
+
+Q3. List the home directory including hidden files.
+    $ ls -a ~
+    (-a shows entries starting with a dot, e.g. .bashrc, .profile)
+
+Q4. Long listing with human-readable sizes.
+    $ ls -lh
+
+Q5. Create a directory named myfirstlab.
+    $ mkdir myfirstlab
+
+Q6. Move into myfirstlab.
+    $ cd myfirstlab
+
+Q7. Create a.txt, b.txt, c.txt with a single command.
+    $ touch a.txt b.txt c.txt
+    (or: touch {a,b,c}.txt)
+
+Q8. Display the full contents of /etc/os-release.
+    $ cat /etc/os-release
+
+Q9. Show the logged-in username.
+    $ whoami
+    (also: id -un, or echo $USER)
+
+Q10. Display the hostname.
+    $ hostname
+
+Q11. Free disk space in human-readable format.
+    $ df -h
+
+Q12. Total RAM and usage in human-readable units.
+    $ free -h
+
+Q13. How long the system has been running.
+    $ uptime
+    (or: uptime -p  for a "up 2 hours, 5 minutes" style output)
+
+Q14. Full system and kernel information.
+    $ uname -a
+
+Q15. Manual page of ls.
+    $ man ls
+    (press q to quit)
+
+Q16. Short usage summary of cp.
+    $ cp --help
+
+Q17. One-line description of mv.
+    $ whatis mv
+    mv (1) - move (rename) files
+
+Q18. Go back to the home directory using ~.
+    $ cd ~
+    (plain "cd" does the same)
+
+Q19. Create nested folders project/src/data in one command.
+    $ mkdir -p project/src/data
+    (-p creates the parent directories as needed)
+
+Q20. Delete c.txt inside myfirstlab.
+    $ rm myfirstlab/c.txt
+    (use rm -i for a confirmation prompt)
+
+----------------------------- SECTION B - MEDIUM -----------------------------
+
+Q21. Create students.txt with 5 names using echo and >>.
+    $ echo "Amit"  >> students.txt
+    $ echo "Neha"  >> students.txt
+    $ echo "Ravi"  >> students.txt
+    $ echo "Zara"  >> students.txt
+    $ echo "Rohan" >> students.txt
+    $ cat students.txt
+
+Q22. First 2 names.
+    $ head -n 2 students.txt
+    Amit
+    Neha
+
+Q23. Last 2 names.
+    $ tail -n 2 students.txt
+    Zara
+    Rohan
+
+Q24. Create backup and copy students.txt into it without leaving the directory.
+    $ mkdir backup
+    $ cp students.txt backup/
+
+Q25. Rename students.txt to class_list.txt.
+    $ mv students.txt class_list.txt
+
+Q26. Search for names containing a given letter.
+    $ grep 'a' class_list.txt        (case-sensitive)
+    $ grep -i 'r' class_list.txt     (ignore case)
+
+Q27. Show line numbers with matches.
+    $ grep -n 'a' class_list.txt
+    1:Amit   (example)
+
+Q28. Owner read/write only, verify.
+    $ chmod 600 class_list.txt          (or: chmod u=rw,go= class_list.txt)
+    $ ls -l class_list.txt
+    -rw------- 1 student student 25 ... class_list.txt
+
+Q29. Find all .txt files in the home directory tree.
+    $ find ~ -name "*.txt"
+
+Q30. Count lines in class_list.txt.
+    $ wc -l class_list.txt
+    5 class_list.txt
+
+Q31. First 5 lines of /etc/passwd.
+    $ head -n 5 /etc/passwd
+
+Q32. Last 5 lines of a system log.
+    $ tail -n 5 /var/log/syslog        (Ubuntu/Debian)
+    $ sudo tail -n 5 /var/log/dpkg.log
+    (on RHEL-type systems use /var/log/messages)
+
+Q33. Copy the project/ directory recursively to project_backup/.
+    $ cp -r project project_backup
+
+Q34. View a large file page by page.
+    $ less /etc/services
+    Quit key: q   (space = next page, b = back, /word = search)
+
+Q35. Move a.txt and b.txt into archive/ at once.
+    $ mkdir -p archive
+    $ mv a.txt b.txt archive/
+
+----------------------------- SECTION C - HARD -------------------------------
+
+Q36. logs directory + app.log with 10 lines, then last 3 lines.
+    $ mkdir logs
+    $ for i in {1..10}; do echo "Dummy log line $i" >> logs/app.log; done
+    $ tail -n 3 logs/app.log
+    Dummy log line 8
+    Dummy log line 9
+    Dummy log line 10
+
+Q37. find with -exec to display the contents of all .log files.
+    $ find . -name "*.log" -exec cat {} \;
+    (use "+" instead of "\;" to pass many files to one cat call)
+
+Q38. Recursively search for the word 'error'.
+    $ grep -r "error" .
+    (add -i for case-insensitive, -n for line numbers)
+
+Q39. Create test.sh, give it execute permission, add a comment explaining rwxr-xr--.
+    $ touch test.sh
+    $ chmod +x test.sh
+    Contents of test.sh:
+        #!/bin/bash
+        # Permission string rwxr-xr-- is split as: rwx | r-x | r--
+        #   owner  (rwx) = read + write + execute  = 4+2+1 = 7
+        #   group  (r-x) = read + execute          = 4+0+1 = 5
+        #   others (r--) = read only               = 4+0+0 = 4
+        # So rwxr-xr-- is the same as  chmod 754
+        echo "test script running"
+    $ ./test.sh
+    test script running
+
+Q40. Single command using && to create demo, enter it and list it.
+    $ mkdir demo && cd demo && ls
+
+Q41. find + wc -l: count .txt files under home.
+    $ find ~ -name "*.txt" | wc -l
+
+Q42. All directories inside /var/log.
+    $ find /var/log -type d
+    (add 2>/dev/null to hide "Permission denied" messages)
+
+Q43. Search /etc/fstab ignoring case.
+    $ grep -i "ext4" /etc/fstab
+    (any keyword, e.g. -i "uuid")
+
+Q44. Disk usage of a folder in human-readable form.
+    $ du -sh /var/log
+    (-s summary, -h human-readable)
+
+Q45. 3 largest files in a directory by sorting ls output.
+    $ ls -lS | head -n 4          (first line "total ..." + 3 files)
+    or: ls -lSh | sed -n '2,4p'
+    Alternative with du: du -ah . | sort -rh | head -n 3
+
+Q46. Why is  rm -rf *  dangerous in an unverified path?
+    - rm -r  deletes recursively, -f suppresses all warnings/prompts.
+    - * expands to EVERYTHING in the current directory. If you are in the
+      wrong directory (e.g. / , ~ or a project root) all data is deleted
+      permanently - Linux has no recycle bin / undo.
+    Safety habit:
+      $ pwd              (confirm where you are)
+      $ ls               (see exactly what will be removed)
+      $ echo rm -rf *    (dry-run: shows what the shell expands to)
+      $ rm -ri *         (or use -i / -I so it asks before deleting)
+
+Q47. Update timestamps without changing contents.
+    $ touch class_list.txt
+    $ ls -l --time-style=full-iso class_list.txt   (verify new time)
+
+Q48. File with duplicates; show only unique lines using sort and uniq.
+    $ printf 'apple\nbanana\napple\ncherry\nbanana\n' > dup.txt
+    $ sort dup.txt | uniq
+    apple
+    banana
+    cherry
+    (uniq only removes ADJACENT duplicates, so sort first. sort -u also works.)
+
+Q49. Redirect stdout of uname -a to sys_info.txt and view it.
+    $ uname -a > sys_info.txt
+    $ cat sys_info.txt
+
+Q50. Files in /var/log modified within the last 7 days.
+    $ find /var/log -type f -mtime -7
+    (-mtime -7 = modified less than 7 days ago; add 2>/dev/null for clean output)
+
+==============================================================================
+END OF LAB SHEET 1 ANSWERS

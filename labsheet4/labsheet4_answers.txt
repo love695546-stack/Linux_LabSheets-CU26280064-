@@ -1,0 +1,189 @@
+LINUX LAB SHEET 4: USER MANAGEMENT  (Subject Code UAC02P)
+useradd, usermod, userdel, passwd, chage and related commands
+ANSWERS
+==============================================================================
+Note: user-management commands need root privileges, so use  sudo  before
+each command (or switch with  sudo -i ).
+
+Q1. Display the current username, UID, primary GID and supplementary groups.
+    $ whoami
+    student
+    $ id
+    uid=1000(student) gid=1000(student) groups=1000(student),27(sudo),...
+    $ id -u ; id -g ; id -G ; id -Gn
+    (uid, primary gid, all group IDs, all group names)
+    $ groups
+
+Q2. Display the /etc/passwd entry of a test user and identify its fields.
+    $ grep student /etc/passwd
+    student:x:1000:1000:Student User,,,:/home/student:/bin/bash
+    Fields (separated by :)
+      1 student            login name
+      2 x                  password placeholder (real hash is in /etc/shadow)
+      3 1000               UID
+      4 1000               primary GID
+      5 Student User,,,    GECOS / comment (full name, etc.)
+      6 /home/student      home directory
+      7 /bin/bash          login shell
+
+Q3. Password/account status without showing the password.
+    $ sudo passwd -S student
+    student P 2026-11-01 0 99999 7 -1
+    (P = usable password, L = locked, NP = no password; then last change
+     date, min age, max age, warning days, inactive days)
+    $ sudo chage -l student        (more readable)
+
+Q4. Create labuser1 with useradd and verify.
+    $ sudo useradd labuser1
+    $ grep labuser1 /etc/passwd
+    labuser1:x:1001:1001::/home/labuser1:/bin/sh
+    $ id labuser1
+    (On Debian/Ubuntu plain useradd does NOT create a home directory or set
+     bash; on RHEL/Rocky it creates the home directory by default.)
+
+Q5. Create labuser2 with a home directory; verify directory and ownership.
+    $ sudo useradd -m labuser2
+    $ ls -ld /home/labuser2
+    drwxr-x--- 2 labuser2 labuser2 4096 ... /home/labuser2
+    $ ls -la /home/labuser2          (shows copied skeleton files from /etc/skel)
+
+Q6. Create labuser3 with /bin/bash as login shell; verify.
+    $ sudo useradd -m -s /bin/bash labuser3
+    $ grep labuser3 /etc/passwd
+    labuser3:x:1003:1003::/home/labuser3:/bin/bash
+    $ getent passwd labuser3 | cut -d: -f7
+    /bin/bash
+
+Q7. Set a password for labuser1 and verify.
+    $ sudo passwd labuser1
+    New password:
+    Retype new password:
+    passwd: password updated successfully
+    $ sudo passwd -S labuser1
+    labuser1 P 2026-11-03 0 99999 7 -1
+
+Q8. Change the password of labuser1 and verify the status again.
+    $ sudo passwd labuser1          (enter a new password twice)
+    $ sudo passwd -S labuser1       (the last-changed date is updated)
+    $ sudo chage -l labuser1 | head -1
+
+Q9. usermod: change labuser2's shell to /bin/bash and verify.
+    $ sudo usermod -s /bin/bash labuser2
+    $ grep labuser2 /etc/passwd
+    labuser2:x:1002:1002::/home/labuser2:/bin/bash
+
+Q10. usermod: change labuser2's home directory (first without, then with moving).
+    (a) Without moving contents - only the entry in /etc/passwd changes:
+        $ sudo usermod -d /home/newlab2 labuser2
+        $ grep labuser2 /etc/passwd
+        labuser2:x:1002:1002::/home/newlab2:/bin/bash
+        $ ls -d /home/newlab2          -> No such file or directory
+        $ ls -a /home/labuser2         -> old files are still in the old home
+    (b) With moving contents - put the old home back first, then use -m -d:
+        $ sudo usermod -d /home/labuser2 labuser2           (restore old path)
+        $ sudo usermod -m -d /home/newlab2 labuser2         (-m = move contents)
+        $ grep labuser2 /etc/passwd
+        labuser2:x:1002:1002::/home/newlab2:/bin/bash
+        $ ls -la /home/newlab2         -> files moved here
+        $ ls -d /home/labuser2         -> No such file or directory
+    (-m works only together with -d; it moves the contents of the home
+     directory currently recorded in /etc/passwd to the new location.)
+    For the rest of the lab, labuser2's home is /home/newlab2.
+
+Q11. Create group userlabgroup, add labuser1 to it with usermod, verify.
+    $ sudo groupadd userlabgroup
+    $ sudo usermod -aG userlabgroup labuser1
+    $ id labuser1
+    uid=1001(labuser1) gid=1001(labuser1) groups=1001(labuser1),1004(userlabgroup)
+    $ getent group userlabgroup
+    userlabgroup:x:1004:labuser1
+    (-a = append; without -a the user is REMOVED from all other
+     supplementary groups.)
+
+Q12. Lock labuser3, verify, unlock, verify.
+    $ sudo passwd -l labuser3        (or: sudo usermod -L labuser3)
+    passwd: password expiry information changed.
+    $ sudo passwd -S labuser3
+    labuser3 L 2026-11-03 0 99999 7 -1        <- L = locked
+    $ sudo grep labuser3 /etc/shadow           (hash starts with "!")
+    $ sudo passwd -u labuser3        (or: sudo usermod -U labuser3)
+    $ sudo passwd -S labuser3
+    labuser3 P ...                              <- usable again
+    (If the user never had a password, unlock may refuse: set one first with
+     sudo passwd labuser3.)
+
+Q13. Detailed password-ageing information for labuser3.
+    $ sudo chage -l labuser3
+    Last password change                : Nov 03, 2026
+    Password expires                    : never
+    Password inactive                   : never
+    Account expires                     : never
+    Minimum number of days between password change : 0
+    Maximum number of days between password change : 99999
+    Number of days of warning before password expires : 7
+
+Q14. Set an account expiration date for labuser3 and verify.
+    $ sudo chage -E 2026-12-31 labuser3
+    $ sudo chage -l labuser3 | grep "Account expires"
+    Account expires                     : Dec 31, 2026
+    (same with:  sudo usermod -e 2026-12-31 labuser3 ;  -E -1 removes expiry)
+
+Q15. Make an existing group the primary group of labuser1.
+    $ sudo usermod -g userlabgroup labuser1
+    $ id labuser1
+    uid=1001(labuser1) gid=1004(userlabgroup) groups=1004(userlabgroup)
+    (-g = primary group, -G = supplementary groups)
+
+Q16. Users and groups of a selected account using id, groups and getent.
+    $ id labuser1
+    $ groups labuser1
+    labuser1 : userlabgroup
+    $ getent passwd labuser1
+    $ getent group userlabgroup
+    $ getent group | grep labuser1        (all groups the user appears in)
+
+Q17. Delete labuser1 without removing its home directory; verify separately.
+    $ sudo userdel labuser1
+    $ grep labuser1 /etc/passwd           -> no output (entry removed)
+    $ id labuser1
+    id: 'labuser1': no such user
+    $ ls -ld /home/labuser1               -> directory still exists
+      (if labuser1 had no home, create one first for the demo)
+    (the files still exist but are now owned by a numeric UID)
+
+Q18. Delete labuser2 and remove its home directory; verify.
+    $ sudo userdel -r labuser2
+    $ grep labuser2 /etc/passwd           -> no output
+    $ ls -ld /home/newlab2                -> No such file or directory
+    (labuser2's home was moved to /home/newlab2 in Q10; if you skipped Q10 the
+     path is /home/labuser2)
+    (-r also removes the home directory and mail spool; add -f to force)
+
+Q19. Complete workflow.
+    $ sudo useradd -m -s /bin/bash demouser             # create + home + shell
+    $ sudo passwd demouser                              # set password
+    $ grep demouser /etc/passwd                         # verify shell
+    $ sudo groupadd demogroup
+    $ sudo usermod -aG demogroup demouser               # supplementary group
+    $ id demouser                                       # verify membership
+    $ sudo passwd -l demouser ; sudo passwd -S demouser # lock + verify (L)
+    $ sudo passwd -u demouser ; sudo passwd -S demouser # unlock + verify (P)
+    $ sudo chage -l demouser                            # ageing info
+    $ ls -ld /home/demouser                             # home ownership
+
+Q20. Clean up all test users and groups; check nothing else was changed.
+    $ sudo userdel -r labuser3
+    $ sudo userdel -r demouser
+    $ sudo userdel -r labuser1 2>/dev/null       (if still present)
+    $ sudo groupdel userlabgroup
+    $ sudo groupdel demogroup
+    $ sudo rm -rf /home/newlab2 /home/labuser1                       (leftovers)
+    Verify:
+    $ grep -E "labuser|demouser" /etc/passwd /etc/group      -> no output
+    $ ls /home                                               -> only real users
+    $ sudo pwck -r                 (read-only check of /etc/passwd & shadow)
+    $ sudo grpck -r                (read-only check of /etc/group)
+    $ id student                    (confirm regular accounts unchanged)
+
+==============================================================================
+END OF LAB SHEET 4 ANSWERS
